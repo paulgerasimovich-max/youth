@@ -10,6 +10,7 @@ import type { RootStackParamList, TabParamList } from './types';
 import { WelcomeScreen } from '../screens/auth/WelcomeScreen';
 import { SignUpScreen } from '../screens/auth/SignUpScreen';
 import { SignInScreen } from '../screens/auth/SignInScreen';
+import { VerifyCodeScreen } from '../screens/auth/VerifyCodeScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { PostScreen } from '../screens/PostScreen';
 import { ChatScreen } from '../screens/ChatScreen';
@@ -25,7 +26,7 @@ import { MyDetailsScreen } from '../screens/profile/MyDetailsScreen';
 import { AlbumFormScreen, AlbumScreen, AlbumsScreen } from '../screens/profile/AlbumScreens';
 import { BlockedScreen, NotificationsScreen, PrivacyScreen } from '../screens/profile/SettingsScreens';
 import { PostFormScreen, SermonFormScreen, SermonScreen, SermonsScreen } from '../screens/leader/SermonScreens';
-import { BirthdaysScreen, GreetingFormScreen, MemberFormScreen, MembersScreen } from '../screens/leader/PeopleScreens';
+import { BirthdaysScreen, GreetingFormScreen, MembersScreen } from '../screens/leader/PeopleScreens';
 import { ReportsScreen } from '../screens/leader/ReportsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -52,6 +53,7 @@ export function RootNavigator() {
           <Stack.Screen name="Welcome" component={WelcomeScreen} />
           <Stack.Screen name="SignUp" component={SignUpScreen} />
           <Stack.Screen name="SignIn" component={SignInScreen} />
+          <Stack.Screen name="VerifyCode" component={VerifyCodeScreen} />
         </>
       ) : (
         <>
@@ -74,7 +76,6 @@ export function RootNavigator() {
           <Stack.Screen name="Sermon" component={SermonScreen} />
           <Stack.Screen name="PostForm" component={PostFormScreen} />
           <Stack.Screen name="Members" component={MembersScreen} />
-          <Stack.Screen name="MemberForm" component={MemberFormScreen} />
           <Stack.Screen name="Birthdays" component={BirthdaysScreen} />
           <Stack.Screen name="GreetingForm" component={GreetingFormScreen} />
           <Stack.Screen name="Reports" component={ReportsScreen} />

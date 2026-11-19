@@ -32,7 +32,7 @@ export function NotificationsScreen() {
 export function PrivacyScreen() {
   const { showToast } = useStore();
   const blocks = [
-    { title: 'What we keep', text: 'Your name, email, phone and birthday, plus what you post in the chat, comments and ideas. Only people in this group can see it.' },
+    { title: 'What we keep', text: 'Just your name, and your birthday if you choose to add it (day and month only). We never ask for a phone number or a password. Your email is used only to send your sign-in code, and nobody in the app can see it.' },
     { title: 'Anonymous questions', text: 'These are never linked to your account. The key to your question lives only on your phone. They are deleted 7 days after the last message, or right away if you tap Delete.' },
     { title: 'You\'re in control', text: 'You can report or block anyone, and you can delete your account at any time from your profile. When you do, your stuff goes with it.' },
   ];

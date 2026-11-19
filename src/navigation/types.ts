@@ -8,6 +8,7 @@ export type RootStackParamList = {
   Welcome: undefined;
   SignUp: undefined;
   SignIn: undefined;
+  VerifyCode: { email: string; name?: string };
   // основное
   Tabs: NavigatorScreenParams<TabParamList> | undefined;
   Post: { postId: string };
@@ -30,7 +31,6 @@ export type RootStackParamList = {
   Sermon: { sermonId: string };
   PostForm: { sermonId: string; quote: string; day?: string };
   Members: undefined;
-  MemberForm: undefined;
   Birthdays: undefined;
   GreetingForm: { userId: string };
   Reports: undefined;

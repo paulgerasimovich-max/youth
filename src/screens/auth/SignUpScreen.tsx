@@ -1,26 +1,15 @@
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 import { colors, space } from '../../theme';
-import { Button, Field, Header, Screen, Txt } from '../../components/ui';
-import { useStore } from '../../data/store';
-import { parseBirthdayInput, todayISO } from '../../lib/dates';
+import { Button, Field, Header, Ionicons, Screen, Txt } from '../../components/ui';
 import type { ScreenProps } from '../../navigation/types';
 
+export const looksLikeEmail = (text: string) => /^\S+@\S+\.\S+$/.test(text.trim());
+
 export function SignUpScreen({ navigation }: ScreenProps<'SignUp'>) {
-  const { signUp } = useStore();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [birthday, setBirthday] = useState('');
-  const [password, setPassword] = useState('');
-
-  const submit = () =>
-    signUp({
-      name: name.trim() || 'Alex Carter',
-      email: email.trim() || 'alex@example.com',
-      phone: phone.trim() || '(555) 010-2030',
-      birthday: parseBirthdayInput(birthday) ?? todayISO().replace(/^\d{4}/, '2008'),
-    });
+  const ready = name.trim().length > 0 && looksLikeEmail(email);
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -29,27 +18,36 @@ export function SignUpScreen({ navigation }: ScreenProps<'SignUp'>) {
         <View style={{ paddingHorizontal: space.xl }}>
           <Txt v="display">Join the{'\n'}group</Txt>
           <Txt v="body" style={{ marginTop: space.sm, marginBottom: space.xxl }}>
-            Takes a minute. No approval needed.
+            Just your name and email. No password to remember.
           </Txt>
 
           <Field label="Name" placeholder="First and last name" value={name} onChangeText={setName} autoCapitalize="words" />
-          <Field label="Email" placeholder="you@example.com" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-          <Field label="Phone" placeholder="(555) 000-0000" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
           <Field
-            label="Birthday"
-            placeholder="MM/DD/YYYY"
-            value={birthday}
-            onChangeText={setBirthday}
-            keyboardType="numbers-and-punctuation"
-            hint="So we can celebrate you 🎂"
+            label="Email"
+            placeholder="you@example.com"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
           />
-          <Field label="Password" placeholder="At least 8 characters" value={password} onChangeText={setPassword} secureTextEntry />
 
-          <Button title="Create account" onPress={submit} style={{ marginTop: space.sm }} />
-          <Txt v="small" center style={{ marginTop: space.lg }}>
-            By joining you agree to our Terms and Privacy Policy.
-          </Txt>
-          <Pressable onPress={() => navigation.replace('SignIn')} style={{ paddingVertical: space.lg }}>
+          <Button
+            title="Send me a code"
+            icon="mail"
+            disabled={!ready}
+            onPress={() => navigation.navigate('VerifyCode', { email: email.trim(), name: name.trim() })}
+            style={{ marginTop: space.sm }}
+          />
+
+          <View style={{ flexDirection: 'row', gap: 10, backgroundColor: colors.plumSoft, padding: 12, borderRadius: 14, marginTop: space.xl }}>
+            <Ionicons name="lock-closed" size={16} color={colors.plum} style={{ marginTop: 2 }} />
+            <Txt v="small" color={colors.plum} style={{ flex: 1 }}>
+              We only use your email to send you a sign-in code. Nobody in the app can see it, and we never ask for your phone number.
+            </Txt>
+          </View>
+
+          <Pressable onPress={() => navigation.replace('SignIn')} style={{ paddingVertical: space.xl }}>
             <Txt v="bodyBold" center color={colors.accent}>I already have an account</Txt>
           </Pressable>
         </View>

@@ -113,21 +113,33 @@ export function timeAgo(iso: string): string {
   return formatMonthDay(toISODate(new Date(iso)));
 }
 
+// День рождения хранится как «ММ-ДД» (без года).
+function birthdayParts(md: string): [number, number] {
+  const [m, d] = md.split('-').map(Number);
+  return [m, d];
+}
+
 // Через сколько дней ближайший день рождения (0 = сегодня)
-export function daysUntilBirthday(birthdayISO: string): number {
+export function daysUntilBirthday(md: string): number {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const b = parseISODate(birthdayISO);
-  let next = new Date(today.getFullYear(), b.getMonth(), b.getDate());
-  if (next.getTime() < today.getTime()) next = new Date(today.getFullYear() + 1, b.getMonth(), b.getDate());
+  const [m, d] = birthdayParts(md);
+  let next = new Date(today.getFullYear(), m - 1, d);
+  if (next.getTime() < today.getTime()) next = new Date(today.getFullYear() + 1, m - 1, d);
   return Math.round((next.getTime() - today.getTime()) / 86400000);
 }
 
-export const isBirthdayToday = (birthdayISO: string) => daysUntilBirthday(birthdayISO) === 0;
+export const isBirthdayToday = (md?: string) => !!md && daysUntilBirthday(md) === 0;
 
-export function birthdayLabel(birthdayISO: string): string {
-  const b = parseISODate(birthdayISO);
-  return `${MONTHS_LONG[b.getMonth()]} ${b.getDate()}`;
+// «November 19»
+export function birthdayLabel(md: string): string {
+  const [m, d] = birthdayParts(md);
+  return `${MONTHS_LONG[m - 1]} ${d}`;
+}
+
+// «ММ-ДД» из даты
+export function toBirthday(date: Date): string {
+  return `${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 export function greetingForNow(): string {
@@ -149,17 +161,18 @@ export function deletesInLabel(lastMessageAt: string): string {
   return `Deletes in ${hours} hour${hours === 1 ? '' : 's'}`;
 }
 
-// «ГГГГ-ММ-ДД» -> «MM/DD/YYYY» (как дату вводит и видит человек)
-export function birthdayToInput(iso: string): string {
-  const [y, m, d] = iso.split('-');
-  return `${m}/${d}/${y}`;
+// «ММ-ДД» -> «MM/DD» (как дату вводит и видит человек)
+export function birthdayToInput(md?: string): string {
+  return md ? md.replace('-', '/') : '';
 }
 
-// «MM/DD/YYYY» -> «ГГГГ-ММ-ДД»; null, если введено что-то непонятное
+// «MM/DD» -> «ММ-ДД»; null, если введено что-то непонятное
 export function parseBirthdayInput(text: string): string | null {
-  const m = text.trim().match(/^(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{4})$/);
+  const m = text.trim().match(/^(\d{1,2})[/.\-](\d{1,2})$/);
   if (!m) return null;
-  const [, mm, dd, yyyy] = m;
-  if (+mm < 1 || +mm > 12 || +dd < 1 || +dd > 31) return null;
-  return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+  const mm = Number(m[1]);
+  const dd = Number(m[2]);
+  const daysInMonth = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (mm < 1 || mm > 12 || dd < 1 || dd > daysInMonth[mm - 1]) return null;
+  return `${pad(mm)}-${pad(dd)}`;
 }

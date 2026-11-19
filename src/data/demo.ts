@@ -2,7 +2,7 @@
 // поэтому прототип всегда выглядит свежим, в какой бы день его ни открыли.
 
 import { mediaTints } from '../theme';
-import { addDays, combine, startOfWeek, toISODate, weekDays } from '../lib/dates';
+import { addDays, combine, startOfWeek, toBirthday, toISODate, weekDays } from '../lib/dates';
 import type {
   Album, AnonThread, BirthdayGreeting, ChatMessage, Comment, DailyPost,
   DeviceSecret, GroupEvent, Idea, MediaItem, Report, Sermon, User,
@@ -51,11 +51,8 @@ const minutesAgo = (m: number) => new Date(now.getTime() - m * 60000).toISOStrin
 const hoursAgo = (h: number) => minutesAgo(h * 60);
 const daysAgo = (d: number) => minutesAgo(d * 24 * 60);
 
-// день рождения через N дней (год рождения — любой)
-const bday = (offset: number, year: number) => {
-  const d = addDays(now, offset);
-  return toISODate(new Date(year, d.getMonth(), d.getDate()));
-};
+// день рождения через N дней («ММ-ДД», без года)
+const bday = (offset: number) => toBirthday(addDays(now, offset));
 
 const media = (i: number, emoji: string, kind: 'photo' | 'video' = 'photo', duration?: string): MediaItem => ({
   id: uid('m'),
@@ -73,19 +70,19 @@ export function randomMedia(kind: 'photo' | 'video'): MediaItem {
 
 export function buildDemoDb(): { db: Db; deviceSecrets: DeviceSecret[] } {
   const users: User[] = [
-    { id: ME_ID, name: 'Alex Carter', email: 'alex@example.com', phone: '(555) 010-2030', birthday: bday(0, 2008), role: 'member' },
-    { id: DAVID, name: 'David Brooks', email: 'david@example.com', phone: '(555) 010-1001', birthday: bday(120, 1984), role: 'admin' },
-    { id: SARAH, name: 'Sarah Mitchell', email: 'sarah@example.com', phone: '(555) 010-1002', birthday: bday(45, 1996), role: 'leader' },
-    { id: JORDAN, name: 'Jordan Reyes', email: 'jordan@example.com', phone: '(555) 010-1003', birthday: bday(16, 1998), role: 'leader' },
-    { id: 'u_mia', name: 'Mia Thompson', email: 'mia@example.com', phone: '(555) 010-1004', birthday: bday(0, 2009), role: 'member' },
-    { id: 'u_noah', name: 'Noah Williams', email: 'noah@example.com', phone: '(555) 010-1005', birthday: bday(3, 2008), role: 'member' },
-    { id: 'u_emma', name: 'Emma Davis', email: 'emma@example.com', phone: '(555) 010-1006', birthday: bday(9, 2010), role: 'member' },
-    { id: 'u_liam', name: 'Liam Johnson', email: 'liam@example.com', phone: '(555) 010-1007', birthday: bday(27, 2007), role: 'member' },
-    { id: 'u_olivia', name: 'Olivia Martinez', email: 'olivia@example.com', phone: '(555) 010-1008', birthday: bday(62, 2009), role: 'member' },
-    { id: 'u_ethan', name: 'Ethan Clark', email: 'ethan@example.com', phone: '(555) 010-1009', birthday: bday(88, 2008), role: 'member' },
-    { id: 'u_ava', name: 'Ava Lewis', email: 'ava@example.com', phone: '(555) 010-1010', birthday: bday(140, 2010), role: 'member' },
-    { id: 'u_lucas', name: 'Lucas Walker', email: 'lucas@example.com', phone: '(555) 010-1011', birthday: bday(200, 2007), role: 'member' },
-    { id: 'u_sophia', name: 'Sophia Hall', email: 'sophia@example.com', phone: '(555) 010-1012', birthday: bday(250, 2009), role: 'member' },
+    { id: ME_ID, name: 'Alex Carter', birthday: bday(0), role: 'member' },
+    { id: DAVID, name: 'David Brooks', birthday: bday(120), role: 'admin' },
+    { id: SARAH, name: 'Sarah Mitchell', birthday: bday(45), role: 'leader' },
+    { id: JORDAN, name: 'Jordan Reyes', birthday: bday(16), role: 'leader' },
+    { id: 'u_mia', name: 'Mia Thompson', birthday: bday(0), role: 'member' },
+    { id: 'u_noah', name: 'Noah Williams', birthday: bday(3), role: 'member' },
+    { id: 'u_emma', name: 'Emma Davis', birthday: bday(9), role: 'member' },
+    { id: 'u_liam', name: 'Liam Johnson', birthday: bday(27), role: 'member' },
+    { id: 'u_olivia', name: 'Olivia Martinez', birthday: bday(62), role: 'member' },
+    { id: 'u_ethan', name: 'Ethan Clark', birthday: bday(88), role: 'member' },
+    { id: 'u_ava', name: 'Ava Lewis', role: 'member' },
+    { id: 'u_lucas', name: 'Lucas Walker', role: 'member' },
+    { id: 'u_sophia', name: 'Sophia Hall', birthday: bday(250), role: 'member' },
   ];
 
   // ---------- Проповедь и посты недели ----------

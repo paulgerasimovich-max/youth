@@ -5,9 +5,7 @@ export type Role = 'member' | 'leader' | 'admin';
 export interface User {
   id: string;
   name: string;
-  email: string;
-  phone: string;
-  birthday: string; // ГГГГ-ММ-ДД
+  birthday?: string; // «ММ-ДД» — по желанию, без года
   role: Role;
 }
 

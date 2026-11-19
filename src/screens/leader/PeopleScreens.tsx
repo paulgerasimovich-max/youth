@@ -3,16 +3,16 @@
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
 import { colors, space } from '../../theme';
-import { Avatar, Button, Card, Chip, Field, Header, IconButton, Ionicons, RoleBadge, Screen, Txt } from '../../components/ui';
+import { Avatar, Button, Card, Chip, Field, Header, Ionicons, RoleBadge, Screen, Txt } from '../../components/ui';
 import { useOverlay } from '../../components/overlay';
 import { useStore } from '../../data/store';
-import { birthdayLabel, daysUntilBirthday, parseBirthdayInput } from '../../lib/dates';
+import { birthdayLabel, daysUntilBirthday } from '../../lib/dates';
 import type { User } from '../../data/types';
 import type { ScreenProps } from '../../navigation/types';
 
 const roleOrder = { admin: 0, leader: 1, member: 2 } as const;
 
-export function MembersScreen({ navigation }: ScreenProps<'Members'>) {
+export function MembersScreen(_props: ScreenProps<'Members'>) {
   const s = useStore();
   const { openSheet } = useOverlay();
   const people = [...s.db.users].sort((a, b) => roleOrder[a.role] - roleOrder[b.role] || a.name.localeCompare(b.name));
@@ -32,13 +32,10 @@ export function MembersScreen({ navigation }: ScreenProps<'Members'>) {
 
   return (
     <Screen padded={false}>
-      <Header
-        title="Members"
-        right={<IconButton icon="person-add" bg={colors.accent} color={colors.white} onPress={() => navigation.navigate('MemberForm')} label="Add someone" />}
-      />
+      <Header title="Members" />
       <View style={{ paddingHorizontal: space.xl, paddingTop: space.sm }}>
         <Txt v="small" style={{ marginBottom: space.md }}>
-          {s.isAdmin ? 'Tap someone to make them a leader.' : 'Only the lead pastor can pick leaders.'}
+          {people.length} people in the group. {s.isAdmin ? 'Tap someone to make them a leader.' : 'Only the lead pastor can pick leaders.'}
         </Txt>
         <Card style={{ paddingVertical: 4 }}>
           {people.map((u, i) => {
@@ -59,7 +56,6 @@ export function MembersScreen({ navigation }: ScreenProps<'Members'>) {
                     <Txt v="bodyBold">{u.name}{u.id === s.me!.id ? ' (you)' : ''}</Txt>
                     <RoleBadge role={u.role} />
                   </View>
-                  <Txt v="small">{u.phone}</Txt>
                 </View>
                 {canManage ? <Ionicons name="ellipsis-horizontal" size={18} color={colors.muted} /> : null}
               </Pressable>
@@ -71,46 +67,18 @@ export function MembersScreen({ navigation }: ScreenProps<'Members'>) {
   );
 }
 
-export function MemberFormScreen({ navigation }: ScreenProps<'MemberForm'>) {
-  const s = useStore();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [birthday, setBirthday] = useState('');
-  const parsed = parseBirthdayInput(birthday);
-  const save = () => {
-    s.addMember({ name: name.trim(), email: email.trim(), phone: phone.trim(), birthday: parsed ?? '2009-01-01' });
-    s.showToast(`${name.trim().split(' ')[0]} was added. We sent them an invite.`);
-    navigation.goBack();
-  };
-  return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <Screen padded={false}>
-        <Header title="Add someone" />
-        <View style={{ paddingHorizontal: space.xl, paddingTop: space.md }}>
-          <Txt v="body" style={{ marginBottom: space.xl }}>They'll get an invite to set their own password.</Txt>
-          <Field label="Name" placeholder="First and last name" value={name} onChangeText={setName} autoCapitalize="words" />
-          <Field label="Email" placeholder="them@example.com" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-          <Field label="Phone" placeholder="(555) 000-0000" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-          <Field label="Birthday" placeholder="MM/DD/YYYY" value={birthday} onChangeText={setBirthday} keyboardType="numbers-and-punctuation" />
-          <Button title="Add to the group" onPress={save} disabled={!name.trim() || !email.trim()} />
-        </View>
-      </Screen>
-    </KeyboardAvoidingView>
-  );
-}
-
 export function BirthdaysScreen({ navigation }: ScreenProps<'Birthdays'>) {
   const s = useStore();
   const people = s.db.users
-    .filter((u) => u.id !== s.me!.id)
-    .map((u) => ({ u, days: daysUntilBirthday(u.birthday) }))
+    .filter((u) => u.id !== s.me!.id && !!u.birthday)
+    .map((u) => ({ u, birthday: u.birthday!, days: daysUntilBirthday(u.birthday!) }))
     .sort((a, b) => a.days - b.days);
   return (
     <Screen padded={false}>
       <Header title="Birthdays" />
       <View style={{ paddingHorizontal: space.xl, paddingTop: space.sm }}>
-        {people.map(({ u, days }) => {
+        <Txt v="small" style={{ marginBottom: space.md }}>Only people who chose to add their birthday show up here.</Txt>
+        {people.map(({ u, birthday, days }) => {
           const today = days === 0;
           const sent = s.db.greetings.some((g) => g.toUserId === u.id && g.fromUserId === s.me!.id);
           return (
@@ -119,7 +87,7 @@ export function BirthdaysScreen({ navigation }: ScreenProps<'Birthdays'>) {
               <View style={{ flex: 1 }}>
                 <Txt v="bodyBold">{u.name}</Txt>
                 <Txt v="small" color={today ? '#8A6300' : undefined}>
-                  {birthdayLabel(u.birthday)} · {today ? 'today 🎂' : days === 1 ? 'tomorrow' : `in ${days} days`}
+                  {birthdayLabel(birthday)} · {today ? 'today 🎂' : days === 1 ? 'tomorrow' : `in ${days} days`}
                 </Txt>
               </View>
               {sent ? (

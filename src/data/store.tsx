@@ -28,7 +28,7 @@ interface Store {
 
   // вход
   signIn: () => void;
-  signUp: (data: Pick<User, 'name' | 'email' | 'phone' | 'birthday'>) => void;
+  signUp: (name: string) => void;
   signOut: () => void;
   deleteAccount: () => void;
   updateMe: (patch: Partial<User>) => void;
@@ -72,7 +72,6 @@ interface Store {
   addSermon: (s: Omit<Sermon, 'id'>) => string;
   savePost: (p: Omit<DailyPost, 'id' | 'authorId' | 'reactions'>) => void;
   deletePost: (id: string) => void;
-  addMember: (data: Pick<User, 'name' | 'email' | 'phone' | 'birthday'>) => void;
   setUserRole: (userId: string, role: Role) => void;
   sendGreeting: (toUserId: string, body: string) => void;
   dismissedGreetings: string[];
@@ -150,8 +149,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       db, me, isLeader, isAdmin, userById, nameOf,
 
       signIn: () => setMeId(ME_ID),
-      signUp: (data) => {
-        patch((d) => ({ users: d.users.map((u) => (u.id === ME_ID ? { ...u, ...data } : u)) }));
+      signUp: (name) => {
+        patch((d) => ({ users: d.users.map((u) => (u.id === ME_ID ? { ...u, name } : u)) }));
         setMeId(ME_ID);
       },
       signOut: () => setMeId(null),
@@ -273,7 +272,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           ),
         })),
       deletePost: (id) => patch((d) => ({ posts: d.posts.filter((p) => p.id !== id) })),
-      addMember: (data) => patch((d) => ({ users: [...d.users, { ...data, id: uid('u'), role: 'member' as const }] })),
       setUserRole: (userId, role) => patch((d) => ({ users: d.users.map((u) => (u.id === userId ? { ...u, role } : u)) })),
       sendGreeting: (toUserId, body) =>
         patch((d) => ({ greetings: [...d.greetings, { id: uid('g'), toUserId, fromUserId: myId, body, createdAt: nowISO() }] })),

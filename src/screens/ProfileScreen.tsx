@@ -29,9 +29,8 @@ export function ProfileScreen() {
       <View style={styles.top}>
         <Avatar user={me} size={88} />
         <Txt v="h1" style={{ marginTop: space.md }}>{me.name}</Txt>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+        <View style={{ marginTop: 6 }}>
           {me.role === 'member' ? <Txt v="small">Member</Txt> : <RoleBadge role={me.role} />}
-          <Txt v="small">· {me.email}</Txt>
         </View>
       </View>
 
