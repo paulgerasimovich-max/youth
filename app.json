@@ -23,7 +23,17 @@
     },
     "plugins": [
       "expo-font",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-sqlite",
+      "expo-video",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Lets you share photos and videos with your group.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
     ]
   }
 }

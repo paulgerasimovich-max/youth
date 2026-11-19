@@ -11,9 +11,12 @@ export function AskQuestionScreen({ navigation }: ScreenProps<'AskQuestion'>) {
   const [leaderId, setLeaderId] = useState<string | undefined>(undefined);
   const leaders = s.db.users.filter((u) => u.role !== 'member' && u.id !== s.me!.id);
 
-  const send = () => {
-    const id = s.askQuestion(body.trim(), leaderId);
-    navigation.replace('Thread', { threadId: id });
+  const [busy, setBusy] = useState(false);
+  const send = async () => {
+    setBusy(true);
+    const id = await s.askQuestion(body.trim(), leaderId);
+    setBusy(false);
+    if (id) navigation.replace('Thread', { threadId: id });
   };
 
   return (
@@ -46,7 +49,7 @@ export function AskQuestionScreen({ navigation }: ScreenProps<'AskQuestion'>) {
             All leaders will still see your question. That keeps everyone safe.
           </Txt>
 
-          <Button title="Send anonymously" icon="eye-off" onPress={send} disabled={!body.trim()} />
+          <Button title={busy ? 'Sending...' : 'Send anonymously'} icon="eye-off" onPress={send} disabled={!body.trim() || busy} />
         </View>
       </Screen>
     </KeyboardAvoidingView>

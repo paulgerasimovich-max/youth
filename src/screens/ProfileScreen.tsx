@@ -34,21 +34,23 @@ export function ProfileScreen() {
         </View>
       </View>
 
-      <View style={styles.demo}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-          <Ionicons name="flask" size={14} color="#8A6300" />
-          <Text style={{ fontFamily: fonts.bodyHeavy, fontSize: 11, letterSpacing: 1, color: '#8A6300' }}>PROTOTYPE ONLY · SEE THE APP AS</Text>
+      {s.isDemo ? (
+        <View style={styles.demo}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+            <Ionicons name="flask" size={14} color="#8A6300" />
+            <Text style={{ fontFamily: fonts.bodyHeavy, fontSize: 11, letterSpacing: 1, color: '#8A6300' }}>PROTOTYPE ONLY · SEE THE APP AS</Text>
+          </View>
+          <Segmented<Role>
+            value={me.role}
+            onChange={s.setDemoRole}
+            options={[
+              { value: 'member', label: 'Member' },
+              { value: 'leader', label: 'Leader' },
+              { value: 'admin', label: 'Pastor' },
+            ]}
+          />
         </View>
-        <Segmented<Role>
-          value={me.role}
-          onChange={s.setDemoRole}
-          options={[
-            { value: 'member', label: 'Member' },
-            { value: 'leader', label: 'Leader' },
-            { value: 'admin', label: 'Pastor' },
-          ]}
-        />
-      </View>
+      ) : null}
 
       {s.isLeader ? (
         <>
@@ -85,7 +87,7 @@ export function ProfileScreen() {
         <Row icon="trash-outline" title="Delete account" danger last onPress={confirmDelete} right={<View />} />
       </Card>
 
-      <Txt v="small" center style={{ marginTop: space.xl }}>Youth Group · prototype</Txt>
+      <Txt v="small" center style={{ marginTop: space.xl }}>{s.isDemo ? 'Youth Group · demo mode' : 'Youth Group'}</Txt>
     </Screen>
   );
 }

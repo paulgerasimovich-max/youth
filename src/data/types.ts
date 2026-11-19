@@ -65,6 +65,9 @@ export interface MediaItem {
   tint: [string, string];
   emoji: string;
   duration?: string; // для видео, например «1:24»
+  uri?: string; // адрес настоящего фото/видео (в демо-режиме пусто — рисуется цветная плитка)
+  path?: string; // где файл лежит в хранилище
+  local?: boolean; // только что выбран на телефоне и ещё не загружен
 }
 
 export interface Album {

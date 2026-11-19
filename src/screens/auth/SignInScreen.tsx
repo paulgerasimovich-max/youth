@@ -2,11 +2,25 @@ import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 import { colors, space } from '../../theme';
 import { Button, Field, Header, Screen, Txt } from '../../components/ui';
+import { useStore } from '../../data/store';
 import type { ScreenProps } from '../../navigation/types';
 import { looksLikeEmail } from './SignUpScreen';
 
 export function SignInScreen({ navigation }: ScreenProps<'SignIn'>) {
-  const [email, setEmail] = useState('alex@example.com');
+  const { requestCode, isDemo } = useStore();
+  const [email, setEmail] = useState(isDemo ? 'alex@example.com' : '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const send = async () => {
+    const address = email.trim().toLowerCase();
+    setBusy(true);
+    setError(null);
+    const problem = await requestCode(address);
+    setBusy(false);
+    if (problem) setError(problem);
+    else navigation.navigate('VerifyCode', { email: address });
+  };
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -28,13 +42,8 @@ export function SignInScreen({ navigation }: ScreenProps<'SignIn'>) {
             autoCorrect={false}
           />
 
-          <Button
-            title="Send me a code"
-            icon="mail"
-            disabled={!looksLikeEmail(email)}
-            onPress={() => navigation.navigate('VerifyCode', { email: email.trim() })}
-            style={{ marginTop: space.sm }}
-          />
+          {error ? <Txt v="smallBold" color={colors.danger} style={{ marginBottom: space.md }}>{error}</Txt> : null}
+          <Button title={busy ? 'Sending...' : 'Send me a code'} icon="mail" disabled={!looksLikeEmail(email) || busy} onPress={send} style={{ marginTop: space.sm }} />
           <Pressable onPress={() => navigation.replace('SignUp')} style={{ paddingVertical: space.xl }}>
             <Txt v="bodyBold" center color={colors.accent}>New here? Join the group</Txt>
           </Pressable>

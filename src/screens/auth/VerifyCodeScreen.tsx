@@ -10,13 +10,34 @@ import type { ScreenProps } from '../../navigation/types';
 const LENGTH = 6;
 
 export function VerifyCodeScreen({ route, navigation }: ScreenProps<'VerifyCode'>) {
-  const { signIn, signUp, showToast } = useStore();
+  const { verifyCode, requestCode, showToast, isDemo } = useStore();
   const { email, name } = route.params;
   const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
 
-  const finish = () => (name ? signUp(name) : signIn());
-  const onChange = (text: string) => setCode(text.replace(/\D/g, '').slice(0, LENGTH));
+  const finish = async () => {
+    setBusy(true);
+    setError(null);
+    const problem = await verifyCode(email, code, name);
+    if (problem) {
+      // при успехе экран сам сменится на приложение
+      setBusy(false);
+      setError(problem);
+      setCode('');
+    }
+  };
+  const resend = async () => {
+    setCode('');
+    setError(null);
+    const problem = await requestCode(email, name);
+    showToast(problem ?? 'New code sent. Check your email.');
+  };
+  const onChange = (text: string) => {
+    setError(null);
+    setCode(text.replace(/\D/g, '').slice(0, LENGTH));
+  };
 
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -50,15 +71,18 @@ export function VerifyCodeScreen({ route, navigation }: ScreenProps<'VerifyCode'
             />
           </Pressable>
 
-          <Button title="Let me in" onPress={finish} disabled={code.length < LENGTH} style={{ marginTop: space.xl }} />
+          {error ? <Txt v="smallBold" color={colors.danger} style={{ marginTop: space.md }}>{error}</Txt> : null}
+          <Button title={busy ? 'Checking...' : 'Let me in'} onPress={finish} disabled={code.length < LENGTH || busy} style={{ marginTop: space.xl }} />
 
-          <Pressable onPress={() => { setCode(''); showToast('New code sent. Check your email.'); }} style={{ paddingTop: space.xl }}>
+          <Pressable onPress={resend} style={{ paddingTop: space.xl }}>
             <Txt v="bodyBold" center color={colors.accent}>Send a new code</Txt>
           </Pressable>
           <Pressable onPress={() => navigation.goBack()} style={{ paddingVertical: space.lg }}>
             <Txt v="bodyBold" center color={colors.inkSoft}>Use a different email</Txt>
           </Pressable>
-          <Txt v="small" center>Prototype: any 6 digits will work.</Txt>
+          <Txt v="small" center>
+            {isDemo ? 'Demo mode: any 6 digits will work.' : "Can't find it? Check your spam folder."}
+          </Txt>
         </View>
       </Screen>
     </KeyboardAvoidingView>

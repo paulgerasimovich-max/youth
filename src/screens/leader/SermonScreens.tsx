@@ -99,9 +99,12 @@ export function SermonFormScreen({ navigation }: ScreenProps<'SermonForm'>) {
   const [text, setText] = useState('');
   const paragraphs = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
 
-  const save = () => {
-    const id = s.addSermon({ title: title.trim(), preacher: preacher.trim() || s.me!.name, date, paragraphs });
-    navigation.replace('Sermon', { sermonId: id });
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    setBusy(true);
+    const id = await s.addSermon({ title: title.trim(), preacher: preacher.trim() || s.me!.name, date, paragraphs });
+    setBusy(false);
+    if (id) navigation.replace('Sermon', { sermonId: id });
   };
 
   return (
@@ -121,7 +124,7 @@ export function SermonFormScreen({ navigation }: ScreenProps<'SermonForm'>) {
             style={{ minHeight: 220 }}
             hint={paragraphs.length > 0 ? `${paragraphs.length} part${paragraphs.length === 1 ? '' : 's'} found.` : 'Leave an empty line between paragraphs. Each one becomes a part you can pick.'}
           />
-          <Button title="Save sermon" onPress={save} disabled={!title.trim() || paragraphs.length === 0} />
+          <Button title={busy ? 'Saving...' : 'Save sermon'} onPress={save} disabled={!title.trim() || paragraphs.length === 0 || busy} />
         </View>
       </Screen>
     </KeyboardAvoidingView>

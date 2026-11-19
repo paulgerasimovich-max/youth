@@ -3,11 +3,11 @@
 import React, { useEffect, useRef } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { colors, fonts, radius, space } from '../theme';
 import { Avatar, AvatarStack, Composer, Ionicons, MediaTile, RoleBadge, Txt } from '../components/ui';
 import { SheetOption, useOverlay } from '../components/overlay';
 import { REACTION_EMOJIS, useStore } from '../data/store';
-import { randomMedia } from '../data/demo';
 import { formatDayShort, formatTime, toISODate, todayISO } from '../lib/dates';
 import type { ChatMessage } from '../data/types';
 
@@ -23,12 +23,16 @@ export function ChatScreen() {
     return () => clearTimeout(t);
   }, [messages.length]);
 
+  const share = async (kind: 'photo' | 'video') => {
+    const [media] = await s.pickMedia(kind);
+    if (media) s.sendChat({ media });
+  };
   const attach = () =>
     openSheet({
       title: 'Share something',
       options: [
-        { label: 'Photo', icon: 'image-outline', onPress: () => s.sendChat({ media: randomMedia('photo') }) },
-        { label: 'Video', icon: 'videocam-outline', onPress: () => s.sendChat({ media: randomMedia('video') }) },
+        { label: 'Photo', icon: 'image-outline', onPress: () => share('photo') },
+        { label: 'Video', icon: 'videocam-outline', onPress: () => share('video') },
       ],
     });
 
@@ -80,6 +84,7 @@ export function ChatScreen() {
 }
 
 function Bubble({ message, showAuthor }: { message: ChatMessage; showAuthor: boolean }) {
+  const nav = useNavigation();
   const s = useStore();
   const { openSheet, closeSheet } = useOverlay();
   const me = s.me!;
@@ -89,7 +94,16 @@ function Bubble({ message, showAuthor }: { message: ChatMessage; showAuthor: boo
   const reactions = Object.entries(message.reactions).filter(([, ids]) => ids.length > 0);
 
   const menu = () => {
-    const options: SheetOption[] = [
+    const options: SheetOption[] = [];
+    const media = message.media;
+    if (media?.uri && !media.local) {
+      options.push({
+        label: media.kind === 'video' ? 'Play video' : 'Open photo',
+        icon: media.kind === 'video' ? 'play-outline' : 'expand-outline',
+        onPress: () => nav.navigate('MediaView', { kind: media.kind, uri: media.uri!, path: media.path }),
+      });
+    }
+    options.push(
       {
         label: 'Forward',
         icon: 'arrow-redo-outline',
@@ -98,7 +112,7 @@ function Bubble({ message, showAuthor }: { message: ChatMessage; showAuthor: boo
           s.showToast('Forwarded to the chat.');
         },
       },
-    ];
+    );
     if (!mine) {
       options.push({ label: 'Report', icon: 'flag-outline', onPress: () => s.report('chat', message.id, message.body ?? 'Photo or video') });
       options.push({ label: `Block ${firstName}`, icon: 'hand-left-outline', danger: true, onPress: () => s.block(message.userId) });

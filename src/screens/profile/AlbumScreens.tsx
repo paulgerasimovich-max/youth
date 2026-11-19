@@ -6,7 +6,6 @@ import { colors, radius, space } from '../../theme';
 import { Button, Card, Empty, Field, Header, IconButton, Ionicons, MediaTile, Screen, Txt } from '../../components/ui';
 import { useOverlay } from '../../components/overlay';
 import { useStore } from '../../data/store';
-import { randomMedia } from '../../data/demo';
 import { formatDayShort } from '../../lib/dates';
 import type { MediaItem } from '../../data/types';
 import type { ScreenProps } from '../../navigation/types';
@@ -44,7 +43,7 @@ export function AlbumsScreen({ navigation }: ScreenProps<'Albums'>) {
   );
 }
 
-export function AlbumScreen({ route }: ScreenProps<'Album'>) {
+export function AlbumScreen({ route, navigation }: ScreenProps<'Album'>) {
   const s = useStore();
   const { openSheet } = useOverlay();
   const album = s.db.albums.find((a) => a.id === route.params.albumId);
@@ -56,7 +55,11 @@ export function AlbumScreen({ route }: ScreenProps<'Album'>) {
       </Screen>
     );
   }
-  const open = (item: MediaItem) =>
+  const open = (item: MediaItem) => {
+    if (item.uri) {
+      navigation.navigate('MediaView', { kind: item.kind, uri: item.uri, path: item.path, from: album.title });
+      return;
+    }
     openSheet({
       header: <MediaTile item={item} style={{ height: 300, marginBottom: space.md }} round={radius.lg} big />,
       options: [
@@ -68,6 +71,7 @@ export function AlbumScreen({ route }: ScreenProps<'Album'>) {
       ],
       cancelLabel: 'Close',
     });
+  };
   const photos = album.items.filter((i) => i.kind === 'photo').length;
   const videos = album.items.length - photos;
   return (
@@ -94,9 +98,13 @@ export function AlbumFormScreen({ navigation }: ScreenProps<'AlbumForm'>) {
   const s = useStore();
   const [title, setTitle] = useState('');
   const [items, setItems] = useState<MediaItem[]>([]);
+  const add = async (kind: 'photo' | 'video') => {
+    const picked = await s.pickMedia(kind, kind === 'photo');
+    if (picked.length > 0) setItems((x) => [...x, ...picked]);
+  };
   const publish = () => {
     s.addAlbum(title.trim(), items);
-    s.showToast('Album is up!');
+    if (s.isDemo) s.showToast('Album is up!');
     navigation.goBack();
   };
   return (
@@ -106,8 +114,8 @@ export function AlbumFormScreen({ navigation }: ScreenProps<'AlbumForm'>) {
         <Field label="Album name" placeholder="Fall Retreat" value={title} onChangeText={setTitle} />
         <Txt v="label" style={{ marginBottom: 8 }}>Photos and videos</Txt>
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: space.md }}>
-          <Button title="Add photos" icon="image" variant="soft" small style={{ flex: 1 }} onPress={() => setItems((x) => [...x, randomMedia('photo'), randomMedia('photo'), randomMedia('photo')])} />
-          <Button title="Add a video" icon="videocam" variant="soft" small style={{ flex: 1 }} onPress={() => setItems((x) => [...x, randomMedia('video')])} />
+          <Button title="Add photos" icon="image" variant="soft" small style={{ flex: 1 }} onPress={() => add('photo')} />
+          <Button title="Add a video" icon="videocam" variant="soft" small style={{ flex: 1 }} onPress={() => add('video')} />
         </View>
         {items.length === 0 ? (
           <View style={styles.drop}>

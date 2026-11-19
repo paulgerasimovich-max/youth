@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import {
-  Platform, Pressable, ScrollView, StyleProp, StyleSheet, Switch, Text, TextInput, TextInputProps,
+  Image, Platform, Pressable, ScrollView, StyleProp, StyleSheet, Switch, Text, TextInput, TextInputProps,
   TextStyle, View, ViewStyle,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -377,7 +377,13 @@ export function MediaTile({ item, style, round = radius.md, big }: {
 }) {
   return (
     <LinearGradient colors={item.tint} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[{ borderRadius: round, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }, style]}>
-      <Text style={{ fontSize: big ? 72 : 30 }}>{item.emoji}</Text>
+      {item.uri && item.kind === 'photo' ? (
+        <Image source={{ uri: item.uri }} resizeMode="cover" style={StyleSheet.absoluteFill} />
+      ) : item.emoji ? (
+        <Text style={{ fontSize: big ? 72 : 30 }}>{item.emoji}</Text>
+      ) : (
+        <Ionicons name={item.kind === 'video' ? 'play-circle' : 'image'} size={big ? 56 : 30} color="rgba(255,255,255,0.9)" />
+      )}
       {item.kind === 'video' ? (
         <View style={styles.videoBadge}>
           <Ionicons name="play" size={10} color={colors.white} />

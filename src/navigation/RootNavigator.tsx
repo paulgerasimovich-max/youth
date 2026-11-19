@@ -24,6 +24,8 @@ import { ThreadScreen } from '../screens/ThreadScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { MyDetailsScreen } from '../screens/profile/MyDetailsScreen';
 import { AlbumFormScreen, AlbumScreen, AlbumsScreen } from '../screens/profile/AlbumScreens';
+import { MediaViewScreen } from '../screens/MediaViewScreen';
+import { NameScreen } from '../screens/auth/NameScreen';
 import { BlockedScreen, NotificationsScreen, PrivacyScreen } from '../screens/profile/SettingsScreens';
 import { PostFormScreen, SermonFormScreen, SermonScreen, SermonsScreen } from '../screens/leader/SermonScreens';
 import { BirthdaysScreen, GreetingFormScreen, MembersScreen } from '../screens/leader/PeopleScreens';
@@ -45,7 +47,8 @@ function Tabs() {
 }
 
 export function RootNavigator() {
-  const { me } = useStore();
+  const { me, needsName } = useStore();
+  if (me && needsName) return <NameScreen />;
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
       {!me ? (
@@ -67,6 +70,7 @@ export function RootNavigator() {
           <Stack.Screen name="MyDetails" component={MyDetailsScreen} />
           <Stack.Screen name="Albums" component={AlbumsScreen} />
           <Stack.Screen name="Album" component={AlbumScreen} />
+          <Stack.Screen name="MediaView" component={MediaViewScreen} options={{ animation: 'fade' }} />
           <Stack.Screen name="AlbumForm" component={AlbumFormScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="Privacy" component={PrivacyScreen} />
