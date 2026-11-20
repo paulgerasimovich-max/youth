@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Animated, FlatList, Keyboard, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { ScrollViewProps, TextInput } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useTabBarHeight } from '../navigation/tabBarHeight';
 import { KeyboardChatScrollView, KeyboardGestureArea, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -87,7 +87,7 @@ export function ChatScreen() {
 
   // Клавиатура ведёт себя как в мессенджерах: сообщения поднимаются вместе с ней, поле ввода «прилипает» к её
   // верхнему краю, а смахнуть её можно, потянув список вниз. Под чатом стоит панель вкладок — учитываем её высоту.
-  const tabBarHeight = useBottomTabBarHeight();
+  const tabBarHeight = useTabBarHeight();
   const renderScroll = useCallback(
     (props: ScrollViewProps) => <KeyboardChatScrollView {...props} offset={tabBarHeight} keyboardDismissMode="interactive" />,
     [tabBarHeight],

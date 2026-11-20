@@ -1,11 +1,12 @@
 // Вся навигация: экраны входа, пять вкладок и внутренние экраны.
 
 import React from 'react';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { colors } from '../theme';
 import { useStore } from '../data/store';
 import { TabBar } from './TabBar';
+import { TabBarHeightProvider } from './tabBarHeight';
 import type { RootStackParamList, TabParamList } from './types';
 import { WelcomeScreen } from '../screens/auth/WelcomeScreen';
 import { SignUpScreen } from '../screens/auth/SignUpScreen';
@@ -32,17 +33,25 @@ import { BirthdaysScreen, GreetingFormScreen, MembersScreen } from '../screens/l
 import { ReportsScreen } from '../screens/leader/ReportsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
-const Tab = createBottomTabNavigator<TabParamList>();
+const Tab = createMaterialTopTabNavigator<TabParamList>();
 
 function Tabs() {
   return (
-    <Tab.Navigator tabBar={(props) => <TabBar {...props} />} screenOptions={{ headerShown: false }}>
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Chat" component={ChatScreen} />
-      <Tab.Screen name="Events" component={EventsScreen} />
-      <Tab.Screen name="Questions" component={QuestionsScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
-    </Tab.Navigator>
+    // Разделы перелистываются свайпом влево-вправо (меню при этом остаётся внизу).
+    // В чате перелистывание выключено: там свайп по сообщению означает «ответить».
+    <TabBarHeightProvider>
+      <Tab.Navigator
+        tabBarPosition="bottom"
+        tabBar={(props) => <TabBar {...props} />}
+        screenOptions={{ swipeEnabled: true, sceneStyle: { backgroundColor: colors.bg } }}
+      >
+        <Tab.Screen name="Home" component={HomeScreen} />
+        <Tab.Screen name="Chat" component={ChatScreen} options={{ swipeEnabled: false }} />
+        <Tab.Screen name="Events" component={EventsScreen} />
+        <Tab.Screen name="Questions" component={QuestionsScreen} />
+        <Tab.Screen name="Profile" component={ProfileScreen} />
+      </Tab.Navigator>
+    </TabBarHeightProvider>
   );
 }
 
