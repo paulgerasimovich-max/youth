@@ -73,6 +73,7 @@ export function RootNavigator() {
         if (data.type === 'chat') navigation.navigate('Tabs', { screen: 'Chat' });
         else if (data.type === 'post' && data.id) navigation.navigate('Post', { postId: data.id });
         else if (data.type === 'event' && data.id) navigation.navigate('EventDetail', { eventId: data.id });
+        else if (data.type === 'report') navigation.navigate('Reports');
         else navigation.navigate('Tabs', { screen: 'Home' });
       }, 300); // даём экранам появиться, если приложение только что открылось
     });

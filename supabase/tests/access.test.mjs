@@ -501,6 +501,24 @@ test('the daily word is pushed once, at its time', async () => {
   await query(ADMIN, `delete from public.daily_posts`);
 });
 
+test('a new report is pushed to leaders, without saying who or what', async () => {
+  await query(paul, `select public.register_push_token('ExponentPushToken[paul-phone]', 'ios')`);
+  await pushed();
+  const msg = await one(bob, `insert into public.chat_messages (body) values ('something rude') returning id`);
+  await pushed(); // само сообщение тоже вызвало уведомления — они здесь не интересны
+  await query(alice, `insert into public.reports (target_type, target_id, preview) values ('chat', $1, 'something rude')`, [msg.id]);
+  let out = await pushed();
+  equal(out.map((m) => m.to).sort(), ['ExponentPushToken[paul-phone]', TOKEN.lena].sort(), 'goes to leaders only');
+  equal([out[0].title, out[0].body, out[0].type], ['New report', 'Someone flagged something. Take a look.', 'report'], 'no message text and no names');
+
+  await query(lena, `insert into public.reports (target_type, target_id, preview) values ('chat', $1, 'something rude')`, [msg.id]);
+  out = await pushed();
+  equal(out.map((m) => m.to), ['ExponentPushToken[paul-phone]'], 'a leader is not pushed about their own report');
+  await query(ADMIN, `delete from public.reports where target_id = $1`, [msg.id]);
+  await query(bob, `delete from public.chat_messages where id = $1`, [msg.id]);
+  await query(ADMIN, `delete from public.push_tokens where token = 'ExponentPushToken[paul-phone]'`);
+});
+
 test('anonymous questions never cause a push', async () => {
   const secret = 'f'.repeat(48);
   const id = (await one(GUEST, `select public.anon_ask($1, $2) as id`, [secret, 'Can I ask something?'])).id;
