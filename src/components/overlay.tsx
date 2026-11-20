@@ -28,7 +28,8 @@ export interface SheetConfig {
 export interface MenuConfig {
   anchor: { x: number; y: number; width: number; height: number }; // где сообщение на экране (координаты окна)
   alignRight?: boolean; // своё сообщение прижато к правому краю
-  emojis?: { items: string[]; active: string[]; onPick: (emoji: string) => void };
+  // items — быстрый ряд, frequent — «часто используемые» вверху полного набора, active — уже поставленные мной
+  emojis?: { items: string[]; frequent?: string[]; active: string[]; onPick: (emoji: string) => void };
   options: SheetOption[];
   onClose?: () => void;
 }
@@ -167,6 +168,8 @@ function AnchoredMenu({ menu, top, bottom, onClose }: { menu: PlacedMenu; top: n
     const panelW = Math.min(bounds.width - EDGE * 2, 380);
     const panelH = Math.min(340, maxBottom - minTop);
     const cell = Math.floor((panelW - 16) / 8);
+    const frequent = emojis.frequent ?? [];
+    const groups = frequent.length > 0 ? [{ title: 'You use these a lot', items: frequent }, ...EMOJI_GROUPS] : EMOJI_GROUPS;
     // Над сообщением, если помещается; иначе под ним; иначе просто в пределах экрана
     let panelTop = anchor.y - GAP - panelH;
     if (panelTop < minTop) panelTop = anchorBottom + GAP;
@@ -176,7 +179,7 @@ function AnchoredMenu({ menu, top, bottom, onClose }: { menu: PlacedMenu; top: n
         <Pressable style={styles.menuBackdrop} onPress={onClose} accessibilityLabel="Close" />
         <View style={[styles.panel, { top: panelTop, left: (bounds.width - panelW) / 2, width: panelW, height: panelH }]}>
           <ScrollView contentContainerStyle={{ padding: 8 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            {EMOJI_GROUPS.map((group) => (
+            {groups.map((group) => (
               <View key={group.title}>
                 <Text style={styles.panelTitle}>{group.title}</Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>

@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { avatarPalette, colors, fonts, radius, space } from '../theme';
 import { REACTION_EMOJIS } from '../data/store';
+import { quickEmojis, rememberEmoji } from '../lib/emojiUsage';
 import type { MediaItem, Reactions, Role, User } from '../data/types';
 
 export type IconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -360,10 +361,14 @@ export function ReactionRow({ reactions, myId, onToggle, light }: {
         );
       })}
       {open ? (
-        REACTION_EMOJIS.map((emoji) => (
+        quickEmojis(REACTION_EMOJIS).map((emoji) => (
           <Pressable
             key={`pick-${emoji}`}
-            onPress={() => { onToggle(emoji); setOpen(false); }}
+            onPress={() => {
+              if (!reactions[emoji]?.includes(myId)) rememberEmoji(emoji);
+              onToggle(emoji);
+              setOpen(false);
+            }}
             style={[styles.reaction, { backgroundColor: light ? 'rgba(255,255,255,0.32)' : colors.sunSoft, borderColor: 'transparent', paddingHorizontal: 9 }]}
           >
             <Text style={{ fontSize: 16 }}>{emoji}</Text>

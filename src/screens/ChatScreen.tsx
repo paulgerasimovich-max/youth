@@ -14,6 +14,7 @@ import { SheetOption, useOverlay } from '../components/overlay';
 import { REACTION_EMOJIS, useStore } from '../data/store';
 import { formatDayShort, formatTime, toISODate, todayISO } from '../lib/dates';
 import { tapFeedback } from '../lib/haptics';
+import { frequentEmojis, quickEmojis, rememberEmoji } from '../lib/emojiUsage';
 import type { ChatMessage } from '../data/types';
 
 const INPUT_ID = 'chat-input';
@@ -217,9 +218,13 @@ function Bubble({ message, showAuthor, onEdit }: { message: ChatMessage; showAut
         anchor: { x, y, width, height },
         alignRight: mine,
         emojis: {
-          items: REACTION_EMOJIS,
-          active: REACTION_EMOJIS.filter((e) => message.reactions[e]?.includes(me.id)),
-          onPick: (emoji) => s.toggleReaction('chat', message.id, emoji),
+          items: quickEmojis(REACTION_EMOJIS), // любимые эмодзи этого человека; остальные — по кнопке «+»
+          frequent: frequentEmojis(),
+          active: Object.keys(message.reactions).filter((e) => message.reactions[e]?.includes(me.id)),
+          onPick: (emoji) => {
+            if (!message.reactions[emoji]?.includes(me.id)) rememberEmoji(emoji);
+            s.toggleReaction('chat', message.id, emoji);
+          },
         },
         options: options(),
         onClose: () => pop(1),
