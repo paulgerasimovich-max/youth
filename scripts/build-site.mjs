@@ -63,7 +63,7 @@ const page = `<!doctype html>
 </head>
 <body>
 <header class="top"><div class="wrap">
-  <a class="brand" href="/"><span class="logo">☀️</span>Youth Group</a>
+  <a class="brand" href="/"><img class="logo" src="/icon.png" alt="">Youth Group</a>
   <nav><a href="/">Home</a><a href="/#help">Help</a></nav>
 </div></header>
 <main class="wrap"><article class="doc">
@@ -75,7 +75,6 @@ ${out.join('\n')}
 `;
 fs.mkdirSync(path.join(root, 'site/privacy'), { recursive: true });
 fs.writeFileSync(path.join(root, 'site/privacy/index.html'), page);
-fs.copyFileSync(path.join(root, 'assets/favicon.png'), path.join(root, 'site/favicon.png'));
 // Правила группы — из того же файла, что показывает приложение
 const rules = JSON.parse(fs.readFileSync(path.join(root, 'src/data/rules.json'), 'utf8'));
 const rulesHtml = [

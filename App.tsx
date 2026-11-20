@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Image, ActivityIndicator, Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
@@ -56,9 +56,7 @@ function Gate() {
   if (!ready) {
     return (
       <LinearGradient colors={gradients.dusk} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={styles.splash}>
-        <View style={styles.splashLogo}>
-          <Ionicons name="sunny" size={34} color={colors.ink} />
-        </View>
+        <Image source={require('./assets/logo.png')} style={styles.splashLogo} />
         <ActivityIndicator color={colors.white} style={{ marginTop: 28 }} />
       </LinearGradient>
     );
@@ -72,7 +70,7 @@ function Gate() {
 
 const styles = StyleSheet.create({
   splash: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  splashLogo: { width: 72, height: 72, borderRadius: 24, backgroundColor: colors.sun, alignItems: 'center', justifyContent: 'center' },
+  splashLogo: { width: 84, height: 84 },
   root: { flex: 1, backgroundColor: colors.bg },
   rootFramed: { backgroundColor: '#150E20', alignItems: 'center', justifyContent: 'center' },
   fill: { flex: 1 },

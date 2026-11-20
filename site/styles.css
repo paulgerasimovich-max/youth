@@ -14,7 +14,7 @@ a { color: var(--accent); text-decoration-thickness: 1.5px; text-underline-offse
 header.top { padding: 20px 0; }
 header.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--ink); font-family: 'Unbounded', sans-serif; font-weight: 700; font-size: 17px; }
-.logo { width: 40px; height: 40px; border-radius: 14px; background: var(--sun); display: grid; place-items: center; font-size: 20px; }
+.logo { width: 40px; height: 40px; display: block; }
 nav a { color: var(--ink-soft); text-decoration: none; font-weight: 700; font-size: 15px; margin-left: 18px; }
 nav a:hover { color: var(--accent); }
 

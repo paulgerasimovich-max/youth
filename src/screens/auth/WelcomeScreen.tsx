@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, gradients, radius, space } from '../../theme';
@@ -12,9 +12,7 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
     <LinearGradient colors={gradients.dusk} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={{ flex: 1 }}>
       <View style={[styles.wrap, { paddingTop: insets.top + 28, paddingBottom: insets.bottom + 24 }]}>
         <View style={styles.logoRow}>
-          <View style={styles.logo}>
-            <Ionicons name="sunny" size={22} color={colors.ink} />
-          </View>
+          <Image source={require('../../../assets/logo.png')} style={styles.logo} />
           <Text style={styles.logoText}>YOUTH GROUP</Text>
         </View>
 
@@ -53,7 +51,7 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
 const styles = StyleSheet.create({
   wrap: { flex: 1, paddingHorizontal: space.xxl },
   logoRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  logo: { width: 40, height: 40, borderRadius: 14, backgroundColor: colors.sun, alignItems: 'center', justifyContent: 'center' },
+  logo: { width: 40, height: 40 },
   logoText: { fontFamily: fonts.display, fontSize: 13, letterSpacing: 2, color: colors.white },
   hero: { fontFamily: fonts.display, fontSize: 44, lineHeight: 50, color: colors.white, letterSpacing: -1 },
   perks: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: space.xxl },
