@@ -21,7 +21,7 @@ export type RootStackParamList = {
   MyDetails: undefined;
   Albums: undefined;
   Album: { albumId: string };
-  MediaView: { kind: 'photo' | 'video'; uri: string; path?: string; from?: string };
+  MediaView: { kind: 'photo' | 'video'; uri: string; path?: string; from?: string; albumId?: string; itemId?: string };
   AlbumForm: undefined;
   Notifications: undefined;
   Privacy: undefined;

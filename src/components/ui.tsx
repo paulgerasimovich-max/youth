@@ -289,10 +289,15 @@ export function Field({ label, hint, style, ...rest }: TextInputProps & { label?
 
 // Строка ввода сообщения внизу экрана (чат, комментарии, ответы)
 // bottomInset={false} — когда под строкой уже есть нижнее меню (оно само держит отступ от края экрана)
-export function Composer({ placeholder, onSend, left, bottomInset = true, inputNativeID }: {
+// value/onChangeText/inputRef — когда текстом управляет экран (чат: правка сообщения подставляет старый текст).
+// top — плашка над полем («Editing…»), sendIcon — значок на кнопке отправки.
+export function Composer({ placeholder, onSend, left, bottomInset = true, inputNativeID, value, onChangeText, inputRef, top, sendIcon = 'arrow-up' }: {
   placeholder: string; onSend: (text: string) => void; left?: React.ReactNode; bottomInset?: boolean; inputNativeID?: string;
+  value?: string; onChangeText?: (text: string) => void; inputRef?: React.RefObject<React.ComponentRef<typeof TextInput> | null>; top?: React.ReactNode; sendIcon?: IconName;
 }) {
-  const [text, setText] = useState('');
+  const [inner, setInner] = useState('');
+  const text = value ?? inner;
+  const setText = onChangeText ?? setInner;
   const insets = useSafeAreaInsets();
   const send = () => {
     const t = text.trim();
@@ -301,9 +306,12 @@ export function Composer({ placeholder, onSend, left, bottomInset = true, inputN
     setText('');
   };
   return (
+    <View>
+    {top}
     <View style={[styles.composer, { paddingBottom: bottomInset ? Math.max(insets.bottom, 10) : 10 }]}>
       {left}
       <TextInput
+        ref={inputRef}
         nativeID={inputNativeID}
         value={text}
         onChangeText={setText}
@@ -316,8 +324,9 @@ export function Composer({ placeholder, onSend, left, bottomInset = true, inputN
         style={[styles.composerInput, noOutline]}
       />
       <Pressable onPress={send} style={[styles.sendBtn, { opacity: text.trim() ? 1 : 0.35 }]} accessibilityLabel="Send">
-        <Ionicons name="arrow-up" size={20} color={colors.white} />
+        <Ionicons name={sendIcon} size={20} color={colors.white} />
       </Pressable>
+    </View>
     </View>
   );
 }

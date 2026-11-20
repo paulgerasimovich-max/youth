@@ -89,6 +89,8 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
         patch((d) => ({ chat: [...d.chat, { id: uid('ch'), userId: myId, reactions: {}, createdAt: nowISO(), ...msg }] })),
       pickMedia: async (kind, multiple) => (multiple ? [randomMedia(kind), randomMedia(kind), randomMedia(kind)] : [randomMedia(kind)]),
       takePhoto: async () => [randomMedia('photo')],
+      editChat: (id, body) =>
+        patch((d) => ({ chat: d.chat.map((m) => (m.id === id ? { ...m, body: body.trim(), editedAt: nowISO() } : m)) })),
       deleteChat: (id) => patch((d) => ({ chat: d.chat.filter((m) => m.id !== id) })),
 
       blocked,

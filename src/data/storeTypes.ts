@@ -46,6 +46,7 @@ export interface Store {
   // выбрать фото/видео с телефона (в демо — цветная плитка)
   pickMedia: (kind: 'photo' | 'video', multiple?: boolean) => Promise<MediaItem[]>;
   takePhoto: () => Promise<MediaItem[]>; // снять на камеру прямо сейчас
+  editChat: (id: string, body: string) => void; // поправить текст своего сообщения
   deleteChat: (id: string) => void;
 
   // жалобы и блокировки

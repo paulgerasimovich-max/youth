@@ -263,9 +263,30 @@ test('chat messages are yours only; leaders can remove any', async () => {
   aliceMsg = (await one(alice, `insert into public.chat_messages (body) values ('hello') returning id`)).id;
   await query(mallory, `insert into public.chat_messages (body) values ('buy now')`);
   await denied(query(mallory, `insert into public.chat_messages (user_id, body) values ($1, 'I am Alice')`, [alice.uid]), /row-level security/, 'post as someone else');
-  await denied(query(mallory, `update public.chat_messages set body = 'changed'`), /permission denied/, 'edit messages');
   equal((await query(mallory, `delete from public.chat_messages where id = $1 returning id`, [aliceMsg])).length, 0, 'delete someone else message');
   await denied(query(GUEST, `select * from public.chat_messages`), /permission denied/, 'guest reads chat');
+});
+
+test('you can edit only the text of your own message', async () => {
+  equal((await query(mallory, `update public.chat_messages set body = 'changed' where id = $1 returning id`, [aliceMsg])).length, 0, 'edit someone else message');
+  await denied(query(alice, `update public.chat_messages set user_id = $1 where id = $2`, [mallory.uid, aliceMsg]), /permission denied/, 'hand a message to someone else');
+  await denied(query(alice, `update public.chat_messages set created_at = now() where id = $1`, [aliceMsg]), /permission denied/, 'change the time');
+  await denied(query(alice, `update public.chat_messages set media_path = 'albums/x/y.jpg', media_kind = 'photo' where id = $1`, [aliceMsg]), /permission denied/, 'attach a file by editing');
+  await denied(query(alice, `update public.chat_messages set forwarded_from = 'Bob' where id = $1`, [aliceMsg]), /permission denied/, 'fake a forward');
+
+  const fresh = await one(alice, `select edited_at from public.chat_messages where id = $1`, [aliceMsg]);
+  equal(fresh.edited_at, null, 'not marked before editing');
+  const edited = await one(alice, `update public.chat_messages set body = 'hello!' where id = $1 returning body, edited_at`, [aliceMsg]);
+  equal(edited.body, 'hello!', 'own text changed');
+  assert(edited.edited_at, 'the server marks it as edited');
+  await denied(query(alice, `update public.chat_messages set edited_at = null where id = $1`, [aliceMsg]), /permission denied/, 'hide the edited mark');
+  await query(alice, `update public.chat_messages set body = 'hello' where id = $1`, [aliceMsg]);
+
+  const fwd = await one(alice, `insert into public.chat_messages (body, forwarded_from) values ('I said this', 'Bob') returning id`);
+  equal((await query(alice, `update public.chat_messages set body = 'no, this' where id = $1 returning id`, [fwd.id])).length, 0, 'edit a forwarded message');
+  await query(alice, `delete from public.chat_messages where id = $1`, [fwd.id]);
+
+  await denied(query(GUEST, `update public.chat_messages set body = 'x'`), /permission denied/, 'guest edits chat');
 });
 
 test('blocking hides that person only for you', async () => {

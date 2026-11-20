@@ -86,6 +86,7 @@ export interface ChatMessage {
   forwardedFrom?: string; // имя автора, если сообщение переслано
   reactions: Reactions;
   createdAt: string;
+  editedAt?: string; // когда автор поправил текст
 }
 
 // ---------- Анонимные вопросы ----------

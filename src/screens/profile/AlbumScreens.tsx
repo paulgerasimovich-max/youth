@@ -58,7 +58,7 @@ export function AlbumScreen({ route, navigation }: ScreenProps<'Album'>) {
   }
   const open = (item: MediaItem) => {
     if (item.uri) {
-      navigation.navigate('MediaView', { kind: item.kind, uri: item.uri, path: item.path, from: album.title });
+      navigation.navigate('MediaView', { kind: item.kind, uri: item.uri, path: item.path, from: album.title, albumId: album.id, itemId: item.id });
       return;
     }
     openSheet({

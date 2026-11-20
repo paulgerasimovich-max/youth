@@ -180,6 +180,7 @@ async function fetchEverything(userId: string, secrets: DeviceSecret[]) {
       id: m.id, userId: m.user_id, body: m.body ?? undefined,
       media: m.media_path ? media(m.id, m.media_kind, m.media_path) : undefined,
       forwardedFrom: m.forwarded_from ?? undefined, reactions: chatR[m.id] ?? {}, createdAt: m.created_at,
+      editedAt: m.edited_at ?? undefined,
     })),
     threads: [...threads.values()],
     greetings: greetings.map((g) => ({ id: g.id, toUserId: g.to_user_id, fromUserId: g.from_user_id ?? '', body: g.body, createdAt: g.created_at })),
@@ -440,6 +441,12 @@ export function LiveStoreProvider({ children }: { children: React.ReactNode }) {
         if (shot === null) showToast('Turn on camera access in Settings to take photos.');
         return shot ?? [];
       },
+      editChat: (id, body) => {
+        const text = body.trim();
+        if (!text) return;
+        patch((d) => ({ chat: d.chat.map((m) => (m.id === id ? { ...m, body: text, editedAt: new Date().toISOString() } : m)) }));
+        act(() => supabase.from('chat_messages').update({ body: text }).eq('id', id));
+      },
       deleteChat: (id) => {
         // Файл убираем из хранилища, только если он загружен в чат и больше ни одно сообщение на него не ссылается
         // (пересланное сообщение и фото из альбома используют тот же файл).
@@ -643,21 +650,31 @@ export function LiveStoreProvider({ children }: { children: React.ReactNode }) {
       },
       deleteAlbum: (id) => {
         const paths = (db.albums.find((a) => a.id === id)?.items ?? []).map((i) => i.path).filter(Boolean) as string[];
-        patch((d) => ({ albums: d.albums.filter((a) => a.id !== id) }));
+        // Вместе с альбомом уходят и сообщения чата, в которые эти фото пересылали, — иначе в чате остались бы пустые плитки
+        patch((d) => ({ albums: d.albums.filter((a) => a.id !== id), chat: d.chat.filter((m) => !m.media?.path || !paths.includes(m.media.path)) }));
         (async () => {
           const ok = await act(() => supabase.from('albums').delete().eq('id', id));
           if (!ok) return;
-          if (paths.length > 0) await supabase.storage.from('media').remove(paths);
+          if (paths.length > 0) {
+            await supabase.storage.from('media').remove(paths);
+            await supabase.from('chat_messages').delete().in('media_path', paths);
+          }
           showToast('Album deleted.');
         })();
       },
       deleteAlbumItem: (albumId, itemId) => {
         const path = db.albums.find((a) => a.id === albumId)?.items.find((i) => i.id === itemId)?.path;
-        patch((d) => ({ albums: d.albums.map((a) => (a.id === albumId ? { ...a, items: a.items.filter((i) => i.id !== itemId) } : a)) }));
+        patch((d) => ({
+          albums: d.albums.map((a) => (a.id === albumId ? { ...a, items: a.items.filter((i) => i.id !== itemId) } : a)),
+          chat: d.chat.filter((m) => !path || m.media?.path !== path),
+        }));
         (async () => {
           const ok = await act(() => supabase.from('media_items').delete().eq('id', itemId));
           if (!ok) return;
-          if (path) await supabase.storage.from('media').remove([path]);
+          if (path) {
+            await supabase.storage.from('media').remove([path]);
+            await supabase.from('chat_messages').delete().eq('media_path', path);
+          }
           showToast('Removed.');
         })();
       },

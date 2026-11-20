@@ -2,7 +2,8 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, FlatList, Keyboard, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import type { ScrollViewProps } from 'react-native';
+import type { ScrollViewProps, TextInput } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { KeyboardChatScrollView, KeyboardGestureArea, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,6 +24,28 @@ export function ChatScreen() {
   const { openSheet } = useOverlay();
   const listRef = useRef<FlatList<ChatMessage>>(null);
   const messages = s.db.chat.filter((m) => !s.blocked.includes(m.userId));
+
+  // Текст в поле ввода и правка: «Edit» подставляет старый текст в поле, как в мессенджерах
+  const [text, setText] = useState('');
+  const [editing, setEditing] = useState<ChatMessage | null>(null);
+  const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
+  const startEdit = useCallback((m: ChatMessage) => {
+    setEditing(m);
+    setText(m.body ?? '');
+    setTimeout(() => inputRef.current?.focus(), 60);
+  }, []);
+  const stopEdit = () => {
+    setEditing(null);
+    setText('');
+  };
+  const submit = (value: string) => {
+    if (editing) {
+      if (value !== editing.body) s.editChat(editing.id, value);
+      setEditing(null);
+    } else {
+      s.sendChat({ body: value });
+    }
+  };
 
   useEffect(() => {
     const t = setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 60);
@@ -86,7 +109,7 @@ export function ChatScreen() {
                   <Txt v="smallBold" color={colors.muted}>{day === todayISO() ? 'Today' : formatDayShort(day)}</Txt>
                 </View>
               ) : null}
-              <Bubble message={item} showAuthor={newDay || prev?.userId !== item.userId} />
+              <Bubble message={item} showAuthor={newDay || prev?.userId !== item.userId} onEdit={startEdit} />
             </>
           );
         }}
@@ -96,12 +119,32 @@ export function ChatScreen() {
         <Composer
           bottomInset={false}
           inputNativeID={INPUT_ID}
+          inputRef={inputRef}
+          value={text}
+          onChangeText={setText}
           placeholder="Message..."
-          onSend={(text) => s.sendChat({ body: text })}
+          onSend={submit}
+          sendIcon={editing ? 'checkmark' : 'arrow-up'}
+          top={
+            editing ? (
+              <View style={styles.editBar}>
+                <Ionicons name="create-outline" size={18} color={colors.accent} />
+                <View style={{ flex: 1 }}>
+                  <Txt v="smallBold" color={colors.accent}>Editing</Txt>
+                  <Txt v="small" numberOfLines={1}>{editing.body}</Txt>
+                </View>
+                <Pressable onPress={stopEdit} hitSlop={10} accessibilityLabel="Cancel editing">
+                  <Ionicons name="close" size={20} color={colors.muted} />
+                </Pressable>
+              </View>
+            ) : null
+          }
           left={
-            <Pressable onPress={attach} style={styles.attach} accessibilityLabel="Add photo or video">
-              <Ionicons name="add" size={24} color={colors.ink} />
-            </Pressable>
+            editing ? undefined : (
+              <Pressable onPress={attach} style={styles.attach} accessibilityLabel="Add photo or video">
+                <Ionicons name="add" size={24} color={colors.ink} />
+              </Pressable>
+            )
           }
         />
       </KeyboardStickyView>
@@ -110,74 +153,88 @@ export function ChatScreen() {
   );
 }
 
-function Bubble({ message, showAuthor }: { message: ChatMessage; showAuthor: boolean }) {
+function Bubble({ message, showAuthor, onEdit }: { message: ChatMessage; showAuthor: boolean; onEdit: (m: ChatMessage) => void }) {
   const nav = useNavigation();
   const s = useStore();
-  const { openSheet, closeSheet } = useOverlay();
+  const { openSheet, openMenu } = useOverlay();
   const me = s.me!;
   const mine = message.userId === me.id;
   const user = s.userById(message.userId);
   const firstName = user?.name.split(' ')[0] ?? 'user';
   const reactions = Object.entries(message.reactions).filter(([, ids]) => ids.length > 0);
+  const bubbleRef = useRef<React.ComponentRef<typeof View>>(null);
 
-  // Зажали сообщение: короткая вибрация, пузырёк чуть «подпрыгивает», следом открывается меню
+  // Нажали или зажали сообщение: пузырёк чуть «подпрыгивает» и остаётся приподнятым, пока открыто меню
   const [scale] = useState(() => new Animated.Value(1));
   const pop = (to: number) =>
     Animated.spring(scale, { toValue: to, useNativeDriver: Platform.OS !== 'web', speed: 28, bounciness: 10 }).start();
 
-  const menu = () => {
-    Keyboard.dismiss();
-    const options: SheetOption[] = [];
+  const confirmDelete = () =>
+    openSheet({
+      title: 'Delete this message?',
+      message: "It'll be gone for everyone.",
+      options: [{ label: 'Delete', icon: 'trash-outline', danger: true, onPress: () => s.deleteChat(message.id) }],
+    });
+
+  const options = (): SheetOption[] => {
+    const list: SheetOption[] = [];
     const media = message.media;
+    const body = message.body;
+    if (body) {
+      list.push({
+        label: 'Copy', icon: 'copy-outline',
+        onPress: () => { Clipboard.setStringAsync(body).then(() => s.showToast('Copied.')).catch(() => {}); },
+      });
+    }
+    if (mine && body && !message.forwardedFrom) list.push({ label: 'Edit', icon: 'create-outline', onPress: () => onEdit(message) });
     if (media?.uri && !media.local) {
-      options.push({
+      list.push({
         label: media.kind === 'video' ? 'Play video' : 'Open photo',
         icon: media.kind === 'video' ? 'play-outline' : 'expand-outline',
         onPress: () => nav.navigate('MediaView', { kind: media.kind, uri: media.uri!, path: media.path }),
       });
     }
-    options.push(
-      {
-        label: 'Forward',
-        icon: 'arrow-redo-outline',
-        onPress: () => {
-          s.sendChat({ body: message.body, media: message.media, forwardedFrom: message.forwardedFrom ?? user?.name ?? 'Someone' });
-          s.showToast('Forwarded to the chat.');
-        },
+    list.push({
+      label: 'Forward', icon: 'arrow-redo-outline',
+      onPress: () => {
+        s.sendChat({ body: message.body, media: message.media, forwardedFrom: message.forwardedFrom ?? user?.name ?? 'Someone' });
+        s.showToast('Forwarded to the chat.');
       },
-    );
-    if (!mine) {
-      options.push({ label: 'Report', icon: 'flag-outline', onPress: () => s.report('chat', message.id, message.body ?? 'Photo or video') });
-      options.push({ label: `Block ${firstName}`, icon: 'hand-left-outline', danger: true, onPress: () => s.block(message.userId) });
-    }
-    if (mine || s.isLeader) {
-      options.push({ label: 'Delete message', icon: 'trash-outline', danger: true, onPress: () => s.deleteChat(message.id) });
-    }
-    openSheet({
-      header: (
-        <View style={styles.emojiRow}>
-          {REACTION_EMOJIS.map((emoji) => {
-            const on = message.reactions[emoji]?.includes(me.id);
-            return (
-              <Pressable
-                key={emoji}
-                onPress={() => { s.toggleReaction('chat', message.id, emoji); closeSheet(); }}
-                style={[styles.emojiBtn, on ? { backgroundColor: colors.accentSoft } : null]}
-              >
-                <Text style={{ fontSize: 24 }}>{emoji}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      ),
-      options,
     });
+    if (!mine) {
+      list.push({ label: 'Report', icon: 'flag-outline', onPress: () => s.report('chat', message.id, message.body ?? 'Photo or video') });
+      list.push({ label: `Block ${firstName}`, icon: 'hand-left-outline', danger: true, onPress: () => s.block(message.userId) });
+    }
+    if (mine || s.isLeader) list.push({ label: 'Delete', icon: 'trash-outline', danger: true, onPress: confirmDelete });
+    return list;
   };
 
-  const hold = () => {
-    tapFeedback();
-    pop(1.06);
-    setTimeout(menu, 110);
+  // Меню появляется прямо у сообщения: эмодзи над ним, действия под ним
+  const showMenu = () => {
+    bubbleRef.current?.measureInWindow((x, y, width, height) => {
+      pop(1.05);
+      openMenu({
+        anchor: { x, y, width, height },
+        alignRight: mine,
+        emojis: {
+          items: REACTION_EMOJIS,
+          active: REACTION_EMOJIS.filter((e) => message.reactions[e]?.includes(me.id)),
+          onPick: (emoji) => s.toggleReaction('chat', message.id, emoji),
+        },
+        options: options(),
+        onClose: () => pop(1),
+      });
+    });
+  };
+  const menu = (withFeedback: boolean) => {
+    if (withFeedback) tapFeedback();
+    // Клавиатура открыта — сначала убираем её и ждём, пока сообщения встанут на место, иначе меню окажется не там
+    if (Keyboard.isVisible()) {
+      Keyboard.dismiss();
+      setTimeout(showMenu, 380);
+    } else {
+      showMenu();
+    }
   };
 
   return (
@@ -191,25 +248,27 @@ function Bubble({ message, showAuthor }: { message: ChatMessage; showAuthor: boo
           </View>
         ) : null}
         <Animated.View style={{ transform: [{ scale }] }}>
-        <Pressable
-          onPress={menu}
-          onLongPress={hold}
-          onPressOut={() => pop(1)}
-          delayLongPress={260}
-          style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}
-        >
-          {message.forwardedFrom ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 }}>
-              <Ionicons name="arrow-redo" size={12} color={mine ? 'rgba(255,255,255,0.8)' : colors.muted} />
-              <Txt v="small" color={mine ? 'rgba(255,255,255,0.8)' : colors.muted}>From {message.forwardedFrom}</Txt>
-            </View>
-          ) : null}
-          {message.media ? <MediaTile item={message.media} style={{ width: 220, height: 160, marginBottom: message.body ? 8 : 0 }} big /> : null}
-          {message.body ? (
-            <Text style={{ fontFamily: fonts.body, fontSize: 15, lineHeight: 21, color: mine ? colors.white : colors.ink }}>{message.body}</Text>
-          ) : null}
-          <Text style={[styles.time, { color: mine ? 'rgba(255,255,255,0.7)' : colors.muted }]}>{formatTime(message.createdAt)}</Text>
-        </Pressable>
+          <Pressable
+            ref={bubbleRef}
+            onPress={() => menu(false)}
+            onLongPress={() => menu(true)}
+            delayLongPress={260}
+            style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}
+          >
+            {message.forwardedFrom ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 }}>
+                <Ionicons name="arrow-redo" size={12} color={mine ? 'rgba(255,255,255,0.8)' : colors.muted} />
+                <Txt v="small" color={mine ? 'rgba(255,255,255,0.8)' : colors.muted}>From {message.forwardedFrom}</Txt>
+              </View>
+            ) : null}
+            {message.media ? <MediaTile item={message.media} style={{ width: 220, height: 160, marginBottom: message.body ? 8 : 0 }} big /> : null}
+            {message.body ? (
+              <Text style={{ fontFamily: fonts.body, fontSize: 15, lineHeight: 21, color: mine ? colors.white : colors.ink }}>{message.body}</Text>
+            ) : null}
+            <Text style={[styles.time, { color: mine ? 'rgba(255,255,255,0.7)' : colors.muted }]}>
+              {message.editedAt ? 'edited · ' : ''}{formatTime(message.createdAt)}
+            </Text>
+          </Pressable>
         </Animated.View>
         {reactions.length > 0 ? (
           <View style={{ flexDirection: 'row', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
@@ -248,7 +307,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, height: 26, borderRadius: 13,
     backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.line,
   },
+  editBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: space.lg, paddingVertical: 8,
+    backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.line,
+  },
   attach: { width: 42, height: 42, borderRadius: 21, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
-  emojiRow: { flexDirection: 'row', justifyContent: 'space-between', paddingBottom: space.md },
-  emojiBtn: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
 });
