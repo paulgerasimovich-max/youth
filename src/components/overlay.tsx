@@ -2,7 +2,7 @@
 // и короткие подсказки. Рисуются поверх всего приложения.
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, radius, space } from '../theme';
 import { useStore } from '../data/store';
@@ -130,13 +130,20 @@ function clamp(v: number, min: number, max: number): number {
 }
 
 function AnchoredMenu({ menu, top, bottom, onClose }: { menu: PlacedMenu; top: number; bottom: number; onClose: () => void }) {
+  // appear — появление списка действий; pillIn — появление ряда эмодзи; expand — ряд раскрывается в полный набор.
+  // Ряд меняет размер, поэтому его анимации идут без «нативного» ускорения (иначе ширину и высоту двигать нельзя).
   const [appear] = useState(() => new Animated.Value(0));
+  const [pillIn] = useState(() => new Animated.Value(0));
+  const [expand] = useState(() => new Animated.Value(0));
+  const [allEmojis, setAllEmojis] = useState(false);
   useEffect(() => {
     Animated.spring(appear, { toValue: 1, useNativeDriver: Platform.OS !== 'web', speed: 26, bounciness: 9 }).start();
-  }, [appear]);
-
-  // «+» в ряду эмодзи раскрывает полный набор (как в Telegram)
-  const [allEmojis, setAllEmojis] = useState(false);
+    Animated.spring(pillIn, { toValue: 1, useNativeDriver: false, speed: 26, bounciness: 9 }).start();
+  }, [appear, pillIn]);
+  const showAll = () => {
+    setAllEmojis(true);
+    Animated.timing(expand, { toValue: 1, duration: 240, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
+  };
 
   const { anchor, bounds, emojis, options } = menu;
   const pillW = emojis ? (emojis.items.length + 1) * EMOJI + 12 : 0;
@@ -164,104 +171,102 @@ function AnchoredMenu({ menu, top, bottom, onClose }: { menu: PlacedMenu; top: n
 
   const side = (w: number) => clamp(menu.alignRight ? anchor.x + anchor.width - w : anchor.x, EDGE, bounds.width - EDGE - w);
 
-  if (emojis && allEmojis) {
-    const panelW = Math.min(bounds.width - EDGE * 2, 380);
-    const panelH = Math.min(340, maxBottom - minTop);
-    const cell = Math.floor((panelW - 16) / 8);
-    const frequent = emojis.frequent ?? [];
-    const groups = frequent.length > 0 ? [{ title: 'You use these a lot', items: frequent }, ...EMOJI_GROUPS] : EMOJI_GROUPS;
-    // Над сообщением, если помещается; иначе под ним; иначе просто в пределах экрана
-    let panelTop = anchor.y - GAP - panelH;
-    if (panelTop < minTop) panelTop = anchorBottom + GAP;
-    panelTop = clamp(panelTop, minTop, maxBottom - panelH);
-    return (
-      <View style={StyleSheet.absoluteFill}>
-        <Pressable style={styles.menuBackdrop} onPress={onClose} accessibilityLabel="Close" />
-        <View style={[styles.panel, { top: panelTop, left: (bounds.width - panelW) / 2, width: panelW, height: panelH }]}>
-          <ScrollView contentContainerStyle={{ padding: 8 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-            {groups.map((group) => (
-              <View key={group.title}>
-                <Text style={styles.panelTitle}>{group.title}</Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                  {group.items.map((emoji) => (
-                    <Pressable
-                      key={emoji}
-                      onPress={() => { onClose(); emojis.onPick(emoji); }}
-                      style={[
-                        { width: cell, height: cell, borderRadius: cell / 2, alignItems: 'center', justifyContent: 'center' },
-                        emojis.active.includes(emoji) ? { backgroundColor: colors.accentSoft } : null,
-                      ]}
-                    >
-                      <Text style={{ fontSize: 26 }}>{emoji}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-      </View>
-    );
-  }
+  // Полный набор вырастает из самого ряда: тот же верхний край и та же сторона, ряд просто становится шире и выше.
+  // Если вниз места не хватает — верх сдвигается ровно настолько, чтобы панель поместилась на экране.
+  const panelW = Math.min(bounds.width - EDGE * 2, 380);
+  const panelH = Math.min(330, maxBottom - minTop);
+  const panelTop = clamp(pillTop, minTop, maxBottom - panelH);
+  const cell = Math.floor((panelW - 16) / 8);
+  const grow = (from: number, to: number) => expand.interpolate({ inputRange: [0, 1], outputRange: [from, to] });
+  const frequent = emojis?.frequent ?? [];
+  const groups = frequent.length > 0 ? [{ title: 'You use these a lot', items: frequent }, ...EMOJI_GROUPS] : EMOJI_GROUPS;
 
   return (
     <View style={StyleSheet.absoluteFill}>
       <Pressable style={styles.menuBackdrop} onPress={onClose} accessibilityLabel="Close" />
+      {!allEmojis ? (
+        <Animated.View
+          style={[
+            styles.menu,
+            { top: menuTop, left: side(MENU_W), opacity: appear },
+            { transform: [{ translateY: appear.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] },
+          ]}
+        >
+          {options.map((o, i) => (
+            <Pressable
+              key={o.label}
+              onPress={() => { onClose(); o.onPress(); }}
+              style={({ pressed }) => [styles.menuOption, i > 0 ? styles.optionBorder : null, pressed ? { backgroundColor: colors.bg } : null]}
+            >
+              <Text style={{ fontFamily: fonts.bodySemi, fontSize: 15, color: o.danger ? colors.danger : colors.ink }}>{o.label}</Text>
+              {o.icon ? <Ionicons name={o.icon} size={18} color={o.danger ? colors.danger : colors.inkSoft} /> : null}
+            </Pressable>
+          ))}
+        </Animated.View>
+      ) : null}
       {emojis ? (
         <Animated.View
           style={[
             styles.pill,
-            { top: pillTop, left: side(pillW), width: pillW, opacity: appear },
-            { transform: [{ scale: appear.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }] },
+            {
+              top: grow(pillTop, panelTop), left: grow(side(pillW), side(panelW)), width: grow(pillW, panelW), height: grow(PILL_H, panelH),
+              borderRadius: grow(PILL_H / 2, 22), opacity: pillIn,
+              transform: [{ scale: pillIn.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }],
+            },
           ]}
         >
-          {emojis.items.map((emoji) => (
-            <Pressable
-              key={emoji}
-              onPress={() => { onClose(); emojis.onPick(emoji); }}
-              style={[styles.pillEmoji, emojis.active.includes(emoji) ? { backgroundColor: colors.accentSoft } : null]}
-            >
-              <Text style={{ fontSize: 24 }}>{emoji}</Text>
-            </Pressable>
-          ))}
-          <Pressable onPress={() => setAllEmojis(true)} style={[styles.pillEmoji, styles.pillMore]} accessibilityLabel="More emojis">
-            <Ionicons name="add" size={22} color={colors.inkSoft} />
-          </Pressable>
+          {allEmojis ? (
+            <Animated.View style={{ flex: 1, opacity: expand }}>
+              <ScrollView contentContainerStyle={{ padding: 8 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                {groups.map((group) => (
+                  <View key={group.title}>
+                    <Text style={styles.panelTitle}>{group.title}</Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                      {group.items.map((emoji) => (
+                        <Pressable
+                          key={emoji}
+                          onPress={() => { onClose(); emojis.onPick(emoji); }}
+                          style={[
+                            { width: cell, height: cell, borderRadius: cell / 2, alignItems: 'center', justifyContent: 'center' },
+                            emojis.active.includes(emoji) ? { backgroundColor: colors.accentSoft } : null,
+                          ]}
+                        >
+                          <Text style={{ fontSize: 26 }}>{emoji}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            </Animated.View>
+          ) : (
+            <View style={styles.pillRow}>
+              {emojis.items.map((emoji) => (
+                <Pressable
+                  key={emoji}
+                  onPress={() => { onClose(); emojis.onPick(emoji); }}
+                  style={[styles.pillEmoji, emojis.active.includes(emoji) ? { backgroundColor: colors.accentSoft } : null]}
+                >
+                  <Text style={{ fontSize: 24 }}>{emoji}</Text>
+                </Pressable>
+              ))}
+              <Pressable onPress={showAll} style={[styles.pillEmoji, styles.pillMore]} accessibilityLabel="More emojis">
+                <Ionicons name="chevron-down" size={20} color={colors.inkSoft} />
+              </Pressable>
+            </View>
+          )}
         </Animated.View>
       ) : null}
-      <Animated.View
-        style={[
-          styles.menu,
-          { top: menuTop, left: side(MENU_W), opacity: appear },
-          { transform: [{ translateY: appear.interpolate({ inputRange: [0, 1], outputRange: [8, 0] }) }] },
-        ]}
-      >
-        {options.map((o, i) => (
-          <Pressable
-            key={o.label}
-            onPress={() => { onClose(); o.onPress(); }}
-            style={({ pressed }) => [styles.menuOption, i > 0 ? styles.optionBorder : null, pressed ? { backgroundColor: colors.bg } : null]}
-          >
-            <Text style={{ fontFamily: fonts.bodySemi, fontSize: 15, color: o.danger ? colors.danger : colors.ink }}>{o.label}</Text>
-            {o.icon ? <Ionicons name={o.icon} size={18} color={o.danger ? colors.danger : colors.inkSoft} /> : null}
-          </Pressable>
-        ))}
-      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   menuBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(32, 21, 46, 0.22)' },
-  pill: {
-    position: 'absolute', height: PILL_H, borderRadius: PILL_H / 2, backgroundColor: colors.surface, flexDirection: 'row',
-    alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(32, 21, 46, 0.18)',
-  },
+  pill: { position: 'absolute', backgroundColor: colors.surface, overflow: 'hidden', boxShadow: '0 8px 24px rgba(32, 21, 46, 0.18)' },
+  pillRow: { height: PILL_H, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   pillEmoji: { width: EMOJI, height: EMOJI, borderRadius: EMOJI / 2, alignItems: 'center', justifyContent: 'center' },
   pillMore: { width: EMOJI - 8, height: EMOJI - 8, marginLeft: 4, marginRight: 4, backgroundColor: colors.bg },
-  panel: {
-    position: 'absolute', borderRadius: 22, backgroundColor: colors.surface, overflow: 'hidden', boxShadow: '0 8px 24px rgba(32, 21, 46, 0.18)',
-  },
   panelTitle: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.muted, marginTop: 8, marginBottom: 4, marginLeft: 6 },
   menu: {
     position: 'absolute', width: MENU_W, borderRadius: 18, backgroundColor: colors.surface, paddingVertical: 4, overflow: 'hidden',
