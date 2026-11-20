@@ -1,16 +1,15 @@
 <!--
-ЧЕРНОВИК политики конфиденциальности (её требуют App Store и Google Play).
-Написан по тому, как приложение устроено на самом деле. Перед публикацией:
-1) заменить всё в [квадратных скобках];
-2) показать юристу или хотя бы внимательно прочитать самому;
-3) разместить на сайте и дать ссылку в магазинах и в приложении (экран Privacy).
+Политика конфиденциальности (её требуют App Store и Google Play). Написана по тому, как приложение устроено на самом деле.
+Это источник: страница сайта site/privacy/ собирается из этого файла командой `npm run site:build`.
+Меняется что-то в сборе данных — сначала правим здесь и дату «Last updated», потом пересобираем и выкладываем сайт.
+Юрист текст не проверял.
 -->
 
 # Youth Group — Privacy Policy
 
-_Last updated: [DATE]_
+_Last updated: November 19, 2026_
 
-Youth Group is an app for the youth group of [CHURCH / ORGANIZATION NAME] ("we", "us"). This page explains, in plain words, what we keep about you and what we don't.
+Youth Group is an app for the youth group of Woodmark Church in Kirkland, Washington ("we", "us"). This page explains, in plain words, what we keep about you and what we don't.
 
 ## The short version
 
@@ -65,12 +64,14 @@ We do not share your information with anyone else unless the law requires it.
 ## Deleting your information
 
 - In the app: **Me → Delete account**. Your profile, messages, comments, ideas and reactions are removed right away.
-- Can't open the app? Email [CONTACT EMAIL] from the address you signed up with and we will delete your account within [30] days.
+- Can't open the app? Email hello@woodmarkyouth.com from the address you signed up with and we will delete your account within 30 days.
 - Photos and events that leaders posted for the whole group stay, without your account attached.
 
 ## Children and teens
 
-This app is meant for members of our youth group aged [13] and older. [If the group includes children under 13, parent or guardian consent is required before they join — confirm how this is handled.]
+This app is only for people who are **13 or older**. You confirm your age when you join.
+
+We do not knowingly collect information from anyone under 13. If we learn that someone under 13 has an account, we delete it. If you think a child under 13 is using the app, email hello@woodmarkyouth.com and we will take care of it.
 
 ## Changes
 
@@ -78,6 +79,6 @@ If we change what we collect, we will update this page and tell you in the app.
 
 ## Contact
 
-[CHURCH / ORGANIZATION NAME]
-[ADDRESS]
-[CONTACT EMAIL]
+Woodmark Church
+Kirkland, WA
+hello@woodmarkyouth.com

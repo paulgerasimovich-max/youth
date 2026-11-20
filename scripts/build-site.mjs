@@ -69,7 +69,7 @@ const page = `<!doctype html>
 <main class="wrap"><article class="doc">
 ${out.join('\n')}
 </article></main>
-<footer><div class="wrap"><span>Youth Group</span><span><a href="/">Home</a> · <a href="/privacy/">Privacy Policy</a></span></div></footer>
+<footer><div class="wrap"><span>Youth Group · Woodmark Church, Kirkland, WA</span><span><a href="/">Home</a> · <a href="/privacy/">Privacy Policy</a></span></div></footer>
 </body>
 </html>
 `;
