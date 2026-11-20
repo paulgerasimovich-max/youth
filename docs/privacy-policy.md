@@ -66,6 +66,7 @@ We do not share your information with anyone else unless the law requires it.
 - In the app: **Me → Delete account**. Your profile, messages, comments, ideas and reactions are removed right away.
 - Can't open the app? Email hello@woodmarkyouth.com from the address you signed up with and we will delete your account within 30 days.
 - Photos and events that leaders posted for the whole group stay, without your account attached.
+- If the lead pastor removes someone from the group for breaking the rules, that account and its content are deleted too. We keep only a scrambled fingerprint of that email address, so the same address can't join again. We can't turn the fingerprint back into the address.
 
 ## Children and teens
 

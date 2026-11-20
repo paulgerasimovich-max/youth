@@ -26,16 +26,25 @@ export function MembersScreen(_props: ScreenProps<'Members'>) {
         u.role === 'member'
           ? { label: `Make ${first} a leader`, icon: 'star-outline', onPress: () => { s.setUserRole(u.id, 'leader'); s.showToast(`${first} is now a leader.`); } }
           : { label: `Remove ${first} as a leader`, icon: 'remove-circle-outline', danger: true, onPress: () => { s.setUserRole(u.id, 'member'); s.showToast(`${first} is a member again.`); } },
+        { label: `Remove ${first} from the group`, icon: 'person-remove-outline', danger: true, onPress: () => confirmRemove(u) },
       ],
     });
   };
+  // Убрать человека из группы насовсем: аккаунт и всё, что он написал, удаляются, с той же почтой он не вернётся
+  const confirmRemove = (u: User) =>
+    openSheet({
+      title: `Remove ${u.name}?`,
+      message: "Their account and everything they posted will be deleted. They won't be able to join again with the same email. You can't undo this.",
+      options: [{ label: 'Yes, remove', icon: 'person-remove-outline', danger: true, onPress: () => s.removeMember(u.id) }],
+      cancelLabel: 'Keep them',
+    });
 
   return (
     <Screen padded={false}>
       <Header title="Members" />
       <View style={{ paddingHorizontal: space.xl, paddingTop: space.sm }}>
         <Txt v="small" style={{ marginBottom: space.md }}>
-          {people.length === 1 ? '1 person' : `${people.length} people`} in the group. {s.isAdmin ? 'Tap someone to make them a leader.' : 'Only the lead pastor can pick leaders.'}
+          {people.length === 1 ? '1 person' : `${people.length} people`} in the group. {s.isAdmin ? 'Tap someone to make them a leader or remove them.' : 'Only the lead pastor can pick leaders.'}
         </Txt>
         <Card style={{ paddingVertical: 4 }}>
           {people.map((u, i) => {

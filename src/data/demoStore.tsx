@@ -198,6 +198,10 @@ export function DemoStoreProvider({ children, signedIn, onExit }: { children: Re
         })),
       deletePost: (id) => patch((d) => ({ posts: d.posts.filter((p) => p.id !== id) })),
       setUserRole: (userId, role) => patch((d) => ({ users: d.users.map((u) => (u.id === userId ? { ...u, role } : u)) })),
+      removeMember: (userId) => {
+        patch((d) => ({ users: d.users.filter((u) => u.id !== userId), chat: d.chat.filter((m) => m.userId !== userId) }));
+        showToast('Removed from the group.');
+      },
       sendGreeting: (toUserId, body) =>
         patch((d) => ({ greetings: [...d.greetings, { id: uid('g'), toUserId, fromUserId: myId, body, createdAt: nowISO() }] })),
       dismissedGreetings,

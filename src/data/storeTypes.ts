@@ -83,6 +83,7 @@ export interface Store {
   savePost: (p: Omit<DailyPost, 'id' | 'authorId' | 'reactions'>) => void;
   deletePost: (id: string) => void;
   setUserRole: (userId: string, role: Role) => void;
+  removeMember: (userId: string) => void; // главный лидер убирает человека из группы насовсем
   sendGreeting: (toUserId: string, body: string) => void;
   dismissedGreetings: string[];
   dismissGreeting: (id: string) => void;

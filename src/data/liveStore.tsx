@@ -667,6 +667,14 @@ export function LiveStoreProvider({ children, onReviewAccess }: { children: Reac
         patch((d) => ({ users: d.users.map((u) => (u.id === targetId ? { ...u, role } : u)) }));
         act(() => supabase.rpc('set_user_role', { p_user: targetId, p_role: role }));
       },
+      removeMember: (targetId) => {
+        // аккаунт и всё, что человек написал, удаляются на сервере; снова войти с той же почтой он не сможет
+        patch((d) => ({ users: d.users.filter((u) => u.id !== targetId), chat: d.chat.filter((m) => m.userId !== targetId) }));
+        (async () => {
+          const ok = await act(() => supabase.rpc('remove_member', { p_user: targetId }));
+          if (ok) showToast('Removed from the group.');
+        })();
+      },
       sendGreeting: (toUserId, body) => {
         act(() => supabase.from('birthday_greetings').insert({ to_user_id: toUserId, body }));
       },

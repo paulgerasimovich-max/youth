@@ -67,7 +67,10 @@ test('no table stores email, phone or password', async () => {
     `select table_name || '.' || column_name as col from information_schema.columns
      where table_schema = 'public' and column_name ~* '(email|phone|password|address)'`,
   );
-  equal(rows.map((r) => r.col), [], 'personal-data columns');
+  // Единственное исключение — список убранных из группы: там не почта, а её отпечаток (sha256), чтобы тот же адрес
+  // не зарегистрировался заново. Что это именно отпечаток и что список никому не виден, проверяет тест про удаление участника.
+  const allowed = ['removed_emails.email_hash'];
+  equal(rows.map((r) => r.col).filter((c) => !allowed.includes(c)), [], 'personal-data columns');
 });
 
 // ============================================================
@@ -538,6 +541,32 @@ test('nobody in the app can send a push or see where pushes go', async () => {
   await denied(query(GUEST, `select public.push_send(array[$1::uuid], 'Hi', 'there', '{}'::jsonb)`, [bob.uid]), /permission denied/, 'guest sends a push');
   await denied(query(alice, `update public.events set reminded_at = now()`), /permission denied/, 'fake a reminder mark');
   equal((await query(lena, `select token from public.push_tokens`)).map((r) => r.token), [TOKEN.lena], 'a leader sees only their own phone');
+});
+
+test('the lead pastor can remove someone from the group, and they cannot come back', async () => {
+  const rudy = await createUser('Rudy');
+  await query(lena, `select public.approve_member($1)`, [rudy.uid]); // к этому месту в тестах включено одобрение новичков
+  await query(rudy, `insert into public.chat_messages (body) values ('rude stuff')`);
+  await denied(query(lena, `select public.remove_member($1)`, [rudy.uid]), /Only the lead pastor/, 'leader removes a member');
+  await denied(query(rudy, `select public.remove_member($1)`, [bob.uid]), /Only the lead pastor/, 'member removes a member');
+  await denied(query(paul, `select public.remove_member($1)`, [paul.uid]), /delete account/, 'lead pastor removes himself this way');
+
+  await query(paul, `select public.remove_member($1)`, [rudy.uid]);
+  equal((await query(ADMIN, `select 1 from auth.users where id = $1`, [rudy.uid])).length, 0, 'account gone');
+  equal((await query(ADMIN, `select 1 from public.chat_messages where body = 'rude stuff'`)).length, 0, 'their messages gone');
+  let cameBack = false;
+  try { await createUser('Rudy'); cameBack = true; } catch (e) { assert(/removed from the group/.test(String(e.message)), `unexpected error: ${e.message}`); }
+  assert(!cameBack, 'the same email cannot join again');
+  const other = await createUser('Ruby'); // другой человек с другой почтой — без проблем
+  await query(ADMIN, `delete from auth.users where id = $1`, [other.uid]);
+
+  const kept = await one(ADMIN, `select email_hash from public.removed_emails`);
+  assert(!kept.email_hash.includes('@') && kept.email_hash.length === 64, 'only a fingerprint of the email is kept');
+  for (const who of [paul, lena, bob]) {
+    await denied(query(who, `select * from public.removed_emails`), /permission denied/, 'read the removed list');
+    await denied(query(who, `delete from public.removed_emails`), /permission denied/, 'clear the removed list');
+  }
+  await denied(query(GUEST, `select * from public.removed_emails`), /permission denied/, 'guest reads the removed list');
 });
 
 test('deleting your account removes your data and nobody else\'s', async () => {
