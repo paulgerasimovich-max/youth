@@ -83,7 +83,7 @@ async function fetchEverything(userId: string, secrets: DeviceSecret[]) {
     profiles, myBirthday, birthdaysToday, birthdaysAll, sermons, posts, postReactions, comments, events, rsvps, ideas, votes,
     albums, mediaItems, chatDesc, chatReactions, greetings, blocks, prefs, reports, leaderThreads, leaderMessages,
   ] = await Promise.all([
-    rows(from('profiles').select('id, name, role')),
+    rows(from('profiles').select('id, name, role, agreed_at')),
     rows(from('birthdays').select('user_id, month, day')),
     rows(supabase.rpc('birthdays_today')),
     rows(supabase.rpc('birthdays_for_leaders')),
