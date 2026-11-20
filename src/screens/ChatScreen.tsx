@@ -1,7 +1,10 @@
 // Общий чат: сообщения, фото/видео, реакции, переслать, пожаловаться, заблокировать.
 
-import React, { useEffect, useRef } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, FlatList, Keyboard, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import type { ScrollViewProps } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { KeyboardChatScrollView, KeyboardGestureArea, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { colors, fonts, radius, space } from '../theme';
@@ -9,7 +12,10 @@ import { Avatar, AvatarStack, Composer, Ionicons, MediaTile, RoleBadge, Txt } fr
 import { SheetOption, useOverlay } from '../components/overlay';
 import { REACTION_EMOJIS, useStore } from '../data/store';
 import { formatDayShort, formatTime, toISODate, todayISO } from '../lib/dates';
+import { tapFeedback } from '../lib/haptics';
 import type { ChatMessage } from '../data/types';
+
+const INPUT_ID = 'chat-input';
 
 export function ChatScreen() {
   const s = useStore();
@@ -23,21 +29,36 @@ export function ChatScreen() {
     return () => clearTimeout(t);
   }, [messages.length]);
 
+  // Клавиатура ведёт себя как в мессенджерах: сообщения поднимаются вместе с ней, поле ввода «прилипает» к её
+  // верхнему краю, а смахнуть её можно, потянув список вниз. Под чатом стоит панель вкладок — учитываем её высоту.
+  const tabBarHeight = useBottomTabBarHeight();
+  const renderScroll = useCallback(
+    (props: ScrollViewProps) => <KeyboardChatScrollView {...props} offset={tabBarHeight} keyboardDismissMode="interactive" />,
+    [tabBarHeight],
+  );
+
   const share = async (kind: 'photo' | 'video') => {
     const [media] = await s.pickMedia(kind);
     if (media) s.sendChat({ media });
   };
-  const attach = () =>
+  const snap = async () => {
+    const [media] = await s.takePhoto();
+    if (media) s.sendChat({ media });
+  };
+  const attach = () => {
+    Keyboard.dismiss();
     openSheet({
       title: 'Share something',
       options: [
-        { label: 'Photo', icon: 'image-outline', onPress: () => share('photo') },
-        { label: 'Video', icon: 'videocam-outline', onPress: () => share('video') },
+        { label: 'Take a photo', icon: 'camera-outline', onPress: snap },
+        { label: 'Pick a photo', icon: 'image-outline', onPress: () => share('photo') },
+        { label: 'Pick a video', icon: 'videocam-outline', onPress: () => share('video') },
       ],
     });
+  };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={[styles.header, { paddingTop: insets.top + space.md }]}>
         <View style={{ flex: 1 }}>
           <Txt v="h1">Group chat</Txt>
@@ -46,10 +67,12 @@ export function ChatScreen() {
         <AvatarStack users={s.db.users.slice(1, 6)} max={4} size={30} ring={colors.bg} />
       </View>
 
+      <KeyboardGestureArea interpolator="ios" style={{ flex: 1 }} textInputNativeID={INPUT_ID}>
       <FlatList
         ref={listRef}
         data={messages}
         keyExtractor={(m) => m.id}
+        renderScrollComponent={renderScroll}
         contentContainerStyle={{ paddingHorizontal: space.lg, paddingVertical: space.md }}
         showsVerticalScrollIndicator={false}
         renderItem={({ item, index }) => {
@@ -69,17 +92,21 @@ export function ChatScreen() {
         }}
       />
 
-      <Composer
-        bottomInset={false}
-        placeholder="Message..."
-        onSend={(text) => s.sendChat({ body: text })}
-        left={
-          <Pressable onPress={attach} style={styles.attach} accessibilityLabel="Add photo or video">
-            <Ionicons name="add" size={24} color={colors.ink} />
-          </Pressable>
-        }
-      />
-    </KeyboardAvoidingView>
+      <KeyboardStickyView offset={{ opened: tabBarHeight }}>
+        <Composer
+          bottomInset={false}
+          inputNativeID={INPUT_ID}
+          placeholder="Message..."
+          onSend={(text) => s.sendChat({ body: text })}
+          left={
+            <Pressable onPress={attach} style={styles.attach} accessibilityLabel="Add photo or video">
+              <Ionicons name="add" size={24} color={colors.ink} />
+            </Pressable>
+          }
+        />
+      </KeyboardStickyView>
+      </KeyboardGestureArea>
+    </View>
   );
 }
 
@@ -93,7 +120,13 @@ function Bubble({ message, showAuthor }: { message: ChatMessage; showAuthor: boo
   const firstName = user?.name.split(' ')[0] ?? 'user';
   const reactions = Object.entries(message.reactions).filter(([, ids]) => ids.length > 0);
 
+  // Зажали сообщение: короткая вибрация, пузырёк чуть «подпрыгивает», следом открывается меню
+  const [scale] = useState(() => new Animated.Value(1));
+  const pop = (to: number) =>
+    Animated.spring(scale, { toValue: to, useNativeDriver: Platform.OS !== 'web', speed: 28, bounciness: 10 }).start();
+
   const menu = () => {
+    Keyboard.dismiss();
     const options: SheetOption[] = [];
     const media = message.media;
     if (media?.uri && !media.local) {
@@ -141,6 +174,12 @@ function Bubble({ message, showAuthor }: { message: ChatMessage; showAuthor: boo
     });
   };
 
+  const hold = () => {
+    tapFeedback();
+    pop(1.06);
+    setTimeout(menu, 110);
+  };
+
   return (
     <View style={[styles.row, mine ? { justifyContent: 'flex-end' } : null, { marginTop: showAuthor ? 14 : 4 }]}>
       {!mine ? <View style={{ width: 34 }}>{showAuthor ? <Avatar user={user} size={34} /> : null}</View> : null}
@@ -151,7 +190,14 @@ function Bubble({ message, showAuthor }: { message: ChatMessage; showAuthor: boo
             {user ? <RoleBadge role={user.role} /> : null}
           </View>
         ) : null}
-        <Pressable onPress={menu} onLongPress={menu} style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}>
+        <Animated.View style={{ transform: [{ scale }] }}>
+        <Pressable
+          onPress={menu}
+          onLongPress={hold}
+          onPressOut={() => pop(1)}
+          delayLongPress={260}
+          style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}
+        >
           {message.forwardedFrom ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 }}>
               <Ionicons name="arrow-redo" size={12} color={mine ? 'rgba(255,255,255,0.8)' : colors.muted} />
@@ -164,6 +210,7 @@ function Bubble({ message, showAuthor }: { message: ChatMessage; showAuthor: boo
           ) : null}
           <Text style={[styles.time, { color: mine ? 'rgba(255,255,255,0.7)' : colors.muted }]}>{formatTime(message.createdAt)}</Text>
         </Pressable>
+        </Animated.View>
         {reactions.length > 0 ? (
           <View style={{ flexDirection: 'row', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
             {reactions.map(([emoji, ids]) => {

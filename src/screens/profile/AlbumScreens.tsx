@@ -7,6 +7,7 @@ import { Button, Card, Empty, Field, Header, IconButton, Ionicons, MediaTile, Sc
 import { useOverlay } from '../../components/overlay';
 import { useStore } from '../../data/store';
 import { formatDayShort } from '../../lib/dates';
+import { tapFeedback } from '../../lib/haptics';
 import type { MediaItem } from '../../data/types';
 import type { ScreenProps } from '../../navigation/types';
 
@@ -72,11 +73,39 @@ export function AlbumScreen({ route, navigation }: ScreenProps<'Album'>) {
       cancelLabel: 'Close',
     });
   };
+  // Убирать фото и альбомы может только лидер: зажать фото — убрать его; «…» вверху — удалить альбом целиком
+  const removeItem = (item: MediaItem) => {
+    tapFeedback();
+    openSheet({
+      header: <MediaTile item={item} style={{ height: 300, marginBottom: space.md }} round={radius.lg} big />,
+      options: [
+        {
+          label: item.kind === 'video' ? 'Remove this video' : 'Remove this photo', icon: 'trash-outline', danger: true,
+          onPress: () => s.deleteAlbumItem(album.id, item.id),
+        },
+      ],
+      cancelLabel: 'Keep it',
+    });
+  };
+  const confirmDeleteAlbum = () =>
+    openSheet({
+      title: 'Delete this album?',
+      message: 'Everything in it will be gone for everyone. You can\'t undo this.',
+      options: [
+        { label: 'Yes, delete it', icon: 'trash-outline', danger: true, onPress: () => { s.deleteAlbum(album.id); navigation.goBack(); } },
+      ],
+      cancelLabel: 'Keep it',
+    });
+  const albumMenu = () =>
+    openSheet({
+      title: album.title,
+      options: [{ label: 'Delete album', icon: 'trash-outline', danger: true, onPress: confirmDeleteAlbum }],
+    });
   const photos = album.items.filter((i) => i.kind === 'photo').length;
   const videos = album.items.length - photos;
   return (
     <Screen padded={false}>
-      <Header />
+      <Header right={s.isLeader ? <IconButton icon="ellipsis-horizontal" onPress={albumMenu} label="Album options" /> : undefined} />
       <View style={{ paddingHorizontal: space.xl }}>
         <Txt v="display">{album.title}</Txt>
         <Txt v="small" style={{ marginTop: 4, marginBottom: space.lg }}>
@@ -84,11 +113,18 @@ export function AlbumScreen({ route, navigation }: ScreenProps<'Album'>) {
         </Txt>
         <View style={styles.grid}>
           {album.items.map((item) => (
-            <Pressable key={item.id} onPress={() => open(item)} style={styles.cell}>
+            <Pressable
+              key={item.id}
+              onPress={() => open(item)}
+              onLongPress={s.isLeader ? () => removeItem(item) : undefined}
+              delayLongPress={300}
+              style={styles.cell}
+            >
               <MediaTile item={item} style={{ flex: 1 }} round={radius.sm + 4} />
             </Pressable>
           ))}
         </View>
+        {s.isLeader && album.items.length > 0 ? <Txt v="small" style={{ marginTop: space.md }}>Hold a photo to remove it.</Txt> : null}
       </View>
     </Screen>
   );

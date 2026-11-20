@@ -88,6 +88,7 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
       sendChat: (msg) =>
         patch((d) => ({ chat: [...d.chat, { id: uid('ch'), userId: myId, reactions: {}, createdAt: nowISO(), ...msg }] })),
       pickMedia: async (kind, multiple) => (multiple ? [randomMedia(kind), randomMedia(kind), randomMedia(kind)] : [randomMedia(kind)]),
+      takePhoto: async () => [randomMedia('photo')],
       deleteChat: (id) => patch((d) => ({ chat: d.chat.filter((m) => m.id !== id) })),
 
       blocked,
@@ -200,6 +201,14 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
           const album: Album = { id: uid('a'), title, date: todayISO(), createdBy: myId, items };
           return { albums: [album, ...d.albums] };
         }),
+      deleteAlbum: (id) => {
+        patch((d) => ({ albums: d.albums.filter((a) => a.id !== id) }));
+        showToast('Album deleted.');
+      },
+      deleteAlbumItem: (albumId, itemId) => {
+        patch((d) => ({ albums: d.albums.map((a) => (a.id === albumId ? { ...a, items: a.items.filter((i) => i.id !== itemId) } : a)) }));
+        showToast('Removed.');
+      },
 
       notif,
       setNotif: (p) => setNotifState((n) => ({ ...n, ...p })),

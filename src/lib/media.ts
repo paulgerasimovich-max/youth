@@ -26,6 +26,18 @@ export async function pickFromLibrary(kind: 'photo' | 'video', multiple: boolean
     selectionLimit: multiple ? 20 : 1,
     quality: 0.7, // сжимаем фото: грузится быстрее, на экране телефона разницы не видно
   });
+  return toItems(result, kind);
+}
+
+// Открыть камеру и сделать снимок. null — человек не разрешил доступ к камере.
+export async function takePhoto(): Promise<MediaItem[] | null> {
+  const permission = await ImagePicker.requestCameraPermissionsAsync();
+  if (!permission.granted) return null;
+  const result = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.7 });
+  return toItems(result, 'photo');
+}
+
+function toItems(result: ImagePicker.ImagePickerResult, kind: 'photo' | 'video'): MediaItem[] {
   if (result.canceled) return [];
   return result.assets.map((asset, i) => {
     const id = Crypto.randomUUID();

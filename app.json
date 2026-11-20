@@ -32,7 +32,7 @@
         "expo-image-picker",
         {
           "photosPermission": "Lets you share photos and videos with your group.",
-          "cameraPermission": false,
+          "cameraPermission": "Lets you take photos to share with your group.",
           "microphonePermission": false
         }
       ]

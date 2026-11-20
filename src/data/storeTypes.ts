@@ -45,6 +45,7 @@ export interface Store {
   sendChat: (msg: { body?: string; media?: MediaItem; forwardedFrom?: string }) => void;
   // выбрать фото/видео с телефона (в демо — цветная плитка)
   pickMedia: (kind: 'photo' | 'video', multiple?: boolean) => Promise<MediaItem[]>;
+  takePhoto: () => Promise<MediaItem[]>; // снять на камеру прямо сейчас
   deleteChat: (id: string) => void;
 
   // жалобы и блокировки
@@ -83,6 +84,8 @@ export interface Store {
   dismissedGreetings: string[];
   dismissGreeting: (id: string) => void;
   addAlbum: (title: string, items: MediaItem[]) => void;
+  deleteAlbum: (id: string) => void;
+  deleteAlbumItem: (albumId: string, itemId: string) => void;
 
   // настройки
   notif: NotifSettings;

@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFonts, Unbounded_500Medium, Unbounded_700Bold } from '@expo-google-fonts/unbounded';
 import {
@@ -33,13 +34,15 @@ export default function App() {
     <View style={[styles.root, framed ? styles.rootFramed : null]}>
       <View style={framed ? [styles.phone, { height: Math.min(height - 32, 880) }] : styles.fill}>
         <SafeAreaProvider>
-          <PhonePreview>
-            <StoreProvider>
-              <OverlayProvider>
-                <Gate />
-              </OverlayProvider>
-            </StoreProvider>
-          </PhonePreview>
+          <KeyboardProvider>
+            <PhonePreview>
+              <StoreProvider>
+                <OverlayProvider>
+                  <Gate />
+                </OverlayProvider>
+              </StoreProvider>
+            </PhonePreview>
+          </KeyboardProvider>
           <StatusBar style="dark" />
         </SafeAreaProvider>
       </View>

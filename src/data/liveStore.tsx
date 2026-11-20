@@ -8,7 +8,7 @@ import { AppState } from 'react-native';
 import * as Crypto from 'expo-crypto';
 import { anonClient, supabase } from '../lib/supabase';
 import { loadJSON, saveJSON } from '../lib/deviceStore';
-import { pickFromLibrary, uploadMedia } from '../lib/media';
+import { pickFromLibrary, takePhoto, uploadMedia } from '../lib/media';
 import { combine, hhmmOf, toBirthday, todayISO } from '../lib/dates';
 import { mediaTints } from '../theme';
 import type { Db } from './demo';
@@ -435,9 +435,21 @@ export function LiveStoreProvider({ children }: { children: React.ReactNode }) {
         uploadAndSend(msg);
       },
       pickMedia: (kind, multiple) => pickFromLibrary(kind, !!multiple),
+      takePhoto: async () => {
+        const shot = await takePhoto();
+        if (shot === null) showToast('Turn on camera access in Settings to take photos.');
+        return shot ?? [];
+      },
       deleteChat: (id) => {
+        // Файл убираем из хранилища, только если он загружен в чат и больше ни одно сообщение на него не ссылается
+        // (пересланное сообщение и фото из альбома используют тот же файл).
+        const path = db.chat.find((m) => m.id === id)?.media?.path;
+        const orphan = !!path && path.startsWith('chat/') && !db.chat.some((m) => m.id !== id && m.media?.path === path);
         patch((d) => ({ chat: d.chat.filter((m) => m.id !== id) }));
-        act(() => supabase.from('chat_messages').delete().eq('id', id));
+        (async () => {
+          const ok = await act(() => supabase.from('chat_messages').delete().eq('id', id));
+          if (ok && orphan) await supabase.storage.from('media').remove([path!]);
+        })();
       },
 
       blocked,
@@ -627,6 +639,26 @@ export function LiveStoreProvider({ children }: { children: React.ReactNode }) {
           if (uploaded.length > 0) await supabase.from('media_items').insert(uploaded);
           await reload();
           showToast(uploaded.length === items.length ? 'Album is up!' : `Album is up. ${items.length - uploaded.length} didn't upload.`);
+        })();
+      },
+      deleteAlbum: (id) => {
+        const paths = (db.albums.find((a) => a.id === id)?.items ?? []).map((i) => i.path).filter(Boolean) as string[];
+        patch((d) => ({ albums: d.albums.filter((a) => a.id !== id) }));
+        (async () => {
+          const ok = await act(() => supabase.from('albums').delete().eq('id', id));
+          if (!ok) return;
+          if (paths.length > 0) await supabase.storage.from('media').remove(paths);
+          showToast('Album deleted.');
+        })();
+      },
+      deleteAlbumItem: (albumId, itemId) => {
+        const path = db.albums.find((a) => a.id === albumId)?.items.find((i) => i.id === itemId)?.path;
+        patch((d) => ({ albums: d.albums.map((a) => (a.id === albumId ? { ...a, items: a.items.filter((i) => i.id !== itemId) } : a)) }));
+        (async () => {
+          const ok = await act(() => supabase.from('media_items').delete().eq('id', itemId));
+          if (!ok) return;
+          if (path) await supabase.storage.from('media').remove([path]);
+          showToast('Removed.');
         })();
       },
 

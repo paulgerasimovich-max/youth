@@ -289,8 +289,8 @@ export function Field({ label, hint, style, ...rest }: TextInputProps & { label?
 
 // Строка ввода сообщения внизу экрана (чат, комментарии, ответы)
 // bottomInset={false} — когда под строкой уже есть нижнее меню (оно само держит отступ от края экрана)
-export function Composer({ placeholder, onSend, left, bottomInset = true }: {
-  placeholder: string; onSend: (text: string) => void; left?: React.ReactNode; bottomInset?: boolean;
+export function Composer({ placeholder, onSend, left, bottomInset = true, inputNativeID }: {
+  placeholder: string; onSend: (text: string) => void; left?: React.ReactNode; bottomInset?: boolean; inputNativeID?: string;
 }) {
   const [text, setText] = useState('');
   const insets = useSafeAreaInsets();
@@ -304,6 +304,7 @@ export function Composer({ placeholder, onSend, left, bottomInset = true }: {
     <View style={[styles.composer, { paddingBottom: bottomInset ? Math.max(insets.bottom, 10) : 10 }]}>
       {left}
       <TextInput
+        nativeID={inputNativeID}
         value={text}
         onChangeText={setText}
         placeholder={placeholder}

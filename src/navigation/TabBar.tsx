@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { BottomTabBarHeightCallbackContext } from '@react-navigation/bottom-tabs';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, radius } from '../theme';
@@ -20,9 +21,13 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { isLeader, unansweredCount, totalUnseenReplies, db } = useStore();
   const openReports = db.reports.filter((r) => !r.resolved).length;
+  const reportHeight = React.useContext(BottomTabBarHeightCallbackContext);
 
   return (
-    <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+    <View
+      style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 10) }]}
+      onLayout={(e) => reportHeight?.(e.nativeEvent.layout.height)}
+    >
       {state.routes.map((route, index) => {
         const focused = state.index === index;
         const cfg = icons[route.name];
