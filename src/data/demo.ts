@@ -47,6 +47,8 @@ const DAVID = 'u_david';
 
 const now = new Date();
 const day = (offset: number) => toISODate(addDays(now, offset));
+// Ближайшая пятница (не сегодня): чтобы «Friday Night Youth» в демо-группе всегда выпадал на пятницу.
+const toFriday = ((5 - now.getDay() + 7) % 7) || 7;
 const minutesAgo = (m: number) => new Date(now.getTime() - m * 60000).toISOString();
 const hoursAgo = (h: number) => minutesAgo(h * 60);
 const daysAgo = (d: number) => minutesAgo(d * 24 * 60);
@@ -147,7 +149,7 @@ export function buildDemoDb(): { db: Db; deviceSecrets: DeviceSecret[] } {
     {
       id: 'e_friday', title: 'Friday Night Youth', place: 'Youth Room, Main Building',
       description: 'Worship, a short message, and games after. Bring a friend! Pizza is on us.',
-      startsAt: combine(day(1), '19:00'), going: ['u_mia', 'u_noah', 'u_emma', 'u_liam', SARAH, JORDAN, 'u_ava'], createdBy: SARAH,
+      startsAt: combine(day(toFriday), '19:00'), going: ['u_mia', 'u_noah', 'u_emma', 'u_liam', SARAH, JORDAN, 'u_ava'], createdBy: SARAH,
     },
     {
       id: 'e_bonfire', title: 'Bonfire & Worship', place: 'Lakeside Park, Shelter 3',
@@ -191,7 +193,7 @@ export function buildDemoDb(): { db: Db; deviceSecrets: DeviceSecret[] } {
       ],
     },
     {
-      id: 'a_baptism', title: 'Baptism Sunday', date: day(-20), createdBy: DAVID,
+      id: 'a_baptism', title: 'Baptism Sunday', date: toISODate(addDays(startOfWeek(now), -15)), createdBy: DAVID, // воскресенье две недели назад
       items: [media(2, '💧'), media(3, '🙏'), media(5, '❤️'), media(0, '🎶', 'video', '2:05'), media(1, '🤍'), media(4, '🙌')],
     },
   ];

@@ -132,7 +132,7 @@ Email: review@woodmarkyouth.com
 Code: 246810
 On the first screen tap "I already have an account", enter the email, tap "Send me a code", then enter the code above. No email is sent for this address.
 
-This opens a demo group with sample people and sample content. We do this on purpose: the real group is a private church youth group that includes minors (13 to 17), and we do not let anyone outside the group read their conversations. Every feature works in the demo group. In the Me tab you can switch between Member, Leader and Admin to see the leader tools.
+This opens a demo group with sample people and sample content. We do this on purpose: the real group is a private church youth group that includes minors (13 to 17), and we do not let anyone outside the group read their conversations. Every feature works in the demo group. In the Me tab you can switch between Member, Leader and Pastor to see the leader tools.
 
 USER-GENERATED CONTENT
 - Before joining, everyone confirms they are 13 or older and agrees to the group rules (zero tolerance for objectionable content and abusive users). The rules are in the app (Me > Group rules) and at https://woodmarkyouth.com/rules/

@@ -38,7 +38,7 @@ export function ProfileScreen() {
         <View style={styles.demo}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
             <Ionicons name="flask" size={14} color="#8A6300" />
-            <Text style={{ fontFamily: fonts.bodyHeavy, fontSize: 11, letterSpacing: 1, color: '#8A6300' }}>PROTOTYPE ONLY · SEE THE APP AS</Text>
+            <Text style={{ fontFamily: fonts.bodyHeavy, fontSize: 11, letterSpacing: 1, color: '#8A6300' }}>DEMO GROUP · SEE THE APP AS</Text>
           </View>
           <Segmented<Role>
             value={me.role}

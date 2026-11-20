@@ -1,6 +1,8 @@
 import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
+import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, gradients, radius, space } from '../../theme';
 import { Button, Ionicons, Txt } from '../../components/ui';
@@ -8,8 +10,11 @@ import type { ScreenProps } from '../../navigation/types';
 
 export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
   const insets = useSafeAreaInsets();
+  // Фон тёмный, поэтому часы и значки сверху делаем светлыми — но только пока этот экран на виду
+  const focused = useIsFocused();
   return (
     <LinearGradient colors={gradients.dusk} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={{ flex: 1 }}>
+      <StatusBar style={focused ? 'light' : 'dark'} />
       <View style={[styles.wrap, { paddingTop: insets.top + 28, paddingBottom: insets.bottom + 24 }]}>
         <View style={styles.logoRow}>
           <Image source={require('../../../assets/logo.png')} style={styles.logo} />
