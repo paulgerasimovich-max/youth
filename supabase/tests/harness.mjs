@@ -35,6 +35,16 @@ export async function createDb() {
   await db.exec(core);
   await db.exec(fs.readFileSync(path.join(here, '../migrations/20261119000004_chat_edit.sql'), 'utf8'));
   await db.exec(fs.readFileSync(path.join(here, '../migrations/20261119000005_chat_reply.sql'), 'utf8'));
+  // Вместо настоящей отправки наружу (pg_net есть только в облаке) — заглушка: записывает, что ушло бы.
+  await db.exec(`
+    create schema net;
+    create table net.sent (id bigserial primary key, url text, body jsonb);
+    create function net.http_post(
+      url text, body jsonb default '{}'::jsonb, params jsonb default '{}'::jsonb,
+      headers jsonb default '{}'::jsonb, timeout_milliseconds integer default 5000
+    ) returns bigint language sql as $$ insert into net.sent (url, body) values (url, body) returning id $$;
+  `);
+  await db.exec(fs.readFileSync(path.join(here, '../migrations/20261119000006_push.sql'), 'utf8'));
 
   // who: 'admin-console' (владелец базы), 'guest' (без входа) или { uid } (вошедший человек).
   // { uid, role: 'anon' } — гость, который зачем-то прислал чужой вход.

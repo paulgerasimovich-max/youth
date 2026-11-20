@@ -4,11 +4,12 @@
 // поэтому здесь нет проверок «а можно ли» — только удобство показа.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import * as Crypto from 'expo-crypto';
 import { anonClient, supabase } from '../lib/supabase';
 import { loadJSON, saveJSON } from '../lib/deviceStore';
 import { pickFromLibrary, takePhoto, uploadMedia } from '../lib/media';
+import { getPushToken } from '../lib/push';
 import { combine, hhmmOf, toBirthday, todayISO } from '../lib/dates';
 import { mediaTints } from '../theme';
 import type { Db } from './demo';
@@ -299,6 +300,19 @@ export function LiveStoreProvider({ children }: { children: React.ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // после входа: запоминаем в базе адрес этого телефона для уведомлений (телефон спросит разрешение один раз)
+  const pushToken = useRef<string | null>(null);
+  useEffect(() => {
+    if (!userId) return;
+    let alive = true;
+    getPushToken(true).then((token) => {
+      if (!alive || !token) return;
+      pushToken.current = token;
+      supabase.rpc('register_push_token', { p_token: token, p_platform: Platform.OS === 'ios' ? 'ios' : 'android' }).then(() => {});
+    });
+    return () => { alive = false; };
+  }, [userId]);
+
   // после входа: первая загрузка, «живые» обновления, обновление при возврате в приложение
   useEffect(() => {
     if (!userId || !deviceLoaded) return;
@@ -383,7 +397,15 @@ export function LiveStoreProvider({ children }: { children: React.ReactNode }) {
         }
         return null;
       },
-      signOut: () => { supabase.auth.signOut({ scope: 'local' }); },
+      signOut: () => {
+        (async () => {
+          // вышел — этот телефон больше не получает уведомления этого аккаунта
+          const token = pushToken.current;
+          pushToken.current = null;
+          if (token) await supabase.from('push_tokens').delete().eq('token', token);
+          await supabase.auth.signOut({ scope: 'local' });
+        })();
+      },
       deleteAccount: () => {
         (async () => {
           const { error } = await supabase.rpc('delete_my_account');
@@ -609,12 +631,13 @@ export function LiveStoreProvider({ children }: { children: React.ReactNode }) {
       },
       savePost: (p) => {
         (async () => {
-          // на один день — один пост: новый заменяет старый
-          await supabase.from('daily_posts').delete().eq('day', p.day);
+          // На один день — один пост: новый текст ложится поверх старого (а не удаляет его),
+          // чтобы у уже разосланного поста сохранилась отметка «уведомление ушло» и оно не пришло второй раз.
           await act(() =>
-            supabase.from('daily_posts').insert({
-              sermon_id: p.sermonId || null, day: p.day, publish_at: combine(p.day, p.time), quote: p.quote, note: p.note ?? null,
-            }),
+            supabase.from('daily_posts').upsert(
+              { sermon_id: p.sermonId || null, day: p.day, publish_at: combine(p.day, p.time), quote: p.quote, note: p.note ?? null },
+              { onConflict: 'day' },
+            ),
           );
         })();
       },

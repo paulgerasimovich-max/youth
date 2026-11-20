@@ -380,6 +380,123 @@ test('a push address can be registered only for yourself', async () => {
   equal((await query(alice, `select * from public.push_tokens`)).length, 0, 'token moved away from Alice');
 });
 
+// ============================================================
+// Push-уведомления: кому уходят, а кому нет
+// ============================================================
+// Что ушло бы на телефоны с момента последней проверки: список { to, title, body, type }
+async function pushed() {
+  const rows = await query(ADMIN, `select body from net.sent order by id`);
+  await query(ADMIN, `delete from net.sent`);
+  return rows.flatMap((r) => r.body).map((m) => ({ to: m.to, title: m.title, body: m.body, type: m.data.type }));
+}
+const TOKEN = { alice: 'ExponentPushToken[alice-phone]', bob: 'ExponentPushToken[bob-phone]', lena: 'ExponentPushToken[lena-phone]' };
+
+test('a chat message is pushed to everyone except its author, the muted and those who blocked them', async () => {
+  await query(ADMIN, `delete from public.push_tokens`);
+  await query(ADMIN, `delete from public.blocks`);
+  await query(alice, `select public.register_push_token($1, 'ios')`, [TOKEN.alice]);
+  await query(bob, `select public.register_push_token($1, 'android')`, [TOKEN.bob]);
+  await query(lena, `select public.register_push_token($1, 'ios')`, [TOKEN.lena]);
+  await pushed();
+
+  await query(alice, `insert into public.chat_messages (body) values ('Who is coming   tonight?')`);
+  let out = await pushed();
+  equal(out.map((m) => m.to).sort(), [TOKEN.bob, TOKEN.lena].sort(), 'goes to the others, not to the author');
+  assert(out[0].title.startsWith('Alice'), 'shows who wrote');
+  equal(out[0].body, 'Who is coming tonight?', 'shows the text on one line');
+  equal(out[0].type, 'chat', 'opens the chat');
+
+  await query(bob, `update public.notification_prefs set chat = false`);
+  await query(lena, `insert into public.blocks (blocked_id) values ($1)`, [alice.uid]);
+  await query(alice, `insert into public.chat_messages (body) values ('anyone?')`);
+  equal(await pushed(), [], 'nobody is pushed: Bob muted the chat, Lena blocked Alice');
+  await query(bob, `update public.notification_prefs set chat = true`);
+  await query(ADMIN, `delete from public.blocks`);
+
+  await query(alice, `insert into public.chat_messages (media_kind, media_path) values ('photo', 'chat/x/y.jpg')`);
+  equal((await pushed())[0].body, 'Sent a photo', 'a photo has a plain caption');
+});
+
+test('events and birthday notes are pushed to the right people', async () => {
+  const ev = await one(lena, `insert into public.events (title, place, starts_at) values ('Bonfire', 'The beach', now() + interval '3 days') returning id`);
+  let out = await pushed();
+  equal(out.map((m) => m.to).sort(), [TOKEN.alice, TOKEN.bob].sort(), 'new event goes to everyone but its creator');
+  equal(out[0].title, 'New event', 'event title');
+  assert(out[0].body.startsWith('Bonfire · '), 'event name and time');
+
+  // напоминание: только тем, кто идёт, и только один раз
+  await query(alice, `insert into public.event_rsvps (event_id) values ($1)`, [ev.id]);
+  equal(await one(ADMIN, `select public.push_event_reminders() as n`), { n: 0 }, 'too early for a reminder');
+  await query(ADMIN, `update public.events set starts_at = now() + interval '1 hour', created_at = now() - interval '2 days' where id = $1`, [ev.id]);
+  await query(ADMIN, `select public.push_event_reminders()`);
+  out = await pushed();
+  equal(out.map((m) => m.to), [TOKEN.alice], 'reminder goes only to people who are in');
+  assert(out[0].body.startsWith('Starts at ') && out[0].body.endsWith(' · The beach'), 'reminder says when and where');
+  await query(ADMIN, `select public.push_event_reminders()`);
+  equal(await pushed(), [], 'reminder is not sent twice');
+  await query(lena, `delete from public.events where id = $1`, [ev.id]);
+
+  await query(lena, `insert into public.birthday_greetings (to_user_id, body) values ($1, 'Happy birthday, Bob!')`, [bob.uid]);
+  out = await pushed();
+  equal(out.map((m) => m.to), [TOKEN.bob], 'a birthday note goes only to that person');
+  equal(out[0].body, 'Lena sent you a note', 'and does not show the note itself');
+  await query(bob, `update public.notification_prefs set birthdays = false`);
+  await query(lena, `insert into public.birthday_greetings (to_user_id, body) values ($1, 'Again!')`, [bob.uid]);
+  equal(await pushed(), [], 'not if they switched birthdays off');
+  await query(bob, `update public.notification_prefs set birthdays = true`);
+});
+
+test('the daily word is pushed once, at its time', async () => {
+  await query(ADMIN, `delete from public.daily_posts`);
+  const post = await one(lena, `insert into public.daily_posts (day, publish_at, quote) values (current_date, now() + interval '1 hour', 'Be still and know.') returning id`);
+  await query(ADMIN, `select public.push_due_daily_posts()`);
+  equal(await pushed(), [], 'not before its time');
+
+  await query(alice, `update public.notification_prefs set daily_word = false`);
+  await query(ADMIN, `update public.daily_posts set publish_at = now() - interval '1 minute' where id = $1`, [post.id]);
+  await query(ADMIN, `select public.push_due_daily_posts()`);
+  const out = await pushed();
+  equal(out.map((m) => m.to).sort(), [TOKEN.bob, TOKEN.lena].sort(), 'to everyone who keeps the daily word on');
+  equal([out[0].title, out[0].body, out[0].type], ["Today's word", 'Be still and know.', 'post'], 'what it says');
+
+  await query(lena, `update public.daily_posts set quote = 'Be still, and know.' where id = $1`, [post.id]);
+  await query(ADMIN, `select public.push_due_daily_posts()`);
+  equal(await pushed(), [], 'fixing a typo does not push again');
+  // так пост сохраняет приложение: «вставить, а если на этот день уже есть — обновить»
+  await query(
+    lena,
+    `insert into public.daily_posts (sermon_id, day, publish_at, quote, note) values (null, current_date, now() - interval '1 minute', 'Be still.', null)
+     on conflict (day) do update set sermon_id = excluded.sermon_id, day = excluded.day, publish_at = excluded.publish_at, quote = excluded.quote, note = excluded.note`,
+  );
+  equal((await query(lena, `select quote from public.daily_posts`)).map((r) => r.quote), ['Be still.'], 'saving over an existing day keeps one post');
+  await query(ADMIN, `select public.push_due_daily_posts()`);
+  equal(await pushed(), [], 'and still does not push again');
+  await denied(query(alice, `insert into public.daily_posts (day, publish_at, quote) values (current_date, now(), 'x') on conflict (day) do update set quote = excluded.quote`), /row-level security|permission denied/, 'a member overwrites the daily word');
+  await query(alice, `update public.notification_prefs set daily_word = true`);
+  await query(ADMIN, `delete from public.daily_posts`);
+});
+
+test('anonymous questions never cause a push', async () => {
+  const secret = 'f'.repeat(48);
+  const id = (await one(GUEST, `select public.anon_ask($1, $2) as id`, [secret, 'Can I ask something?'])).id;
+  await query(lena, `insert into public.anon_messages (thread_id, sender, leader_id, body) values ($1, 'leader', $2, 'Of course')`, [id, lena.uid]);
+  await query(GUEST, `select public.anon_reply($1, 'Thanks')`, [secret]);
+  equal(await pushed(), [], 'no push for a question, an answer or a reply');
+  await query(GUEST, `select public.anon_delete($1)`, [secret]);
+});
+
+test('nobody in the app can send a push or see where pushes go', async () => {
+  for (const who of [alice, lena, paul]) {
+    await denied(query(who, `select public.push_send(array[$1::uuid], 'Hi', 'there', '{}'::jsonb)`, [bob.uid]), /permission denied/, 'send a push by hand');
+    await denied(query(who, `select public.push_due_daily_posts()`), /permission denied/, 'trigger the daily word');
+    await denied(query(who, `select public.push_event_reminders()`), /permission denied/, 'trigger reminders');
+    await denied(query(who, `select * from net.sent`), /permission denied/, 'read what was sent');
+  }
+  await denied(query(GUEST, `select public.push_send(array[$1::uuid], 'Hi', 'there', '{}'::jsonb)`, [bob.uid]), /permission denied/, 'guest sends a push');
+  await denied(query(alice, `update public.events set reminded_at = now()`), /permission denied/, 'fake a reminder mark');
+  equal((await query(lena, `select token from public.push_tokens`)).map((r) => r.token), [TOKEN.lena], 'a leader sees only their own phone');
+});
+
 test('deleting your account removes your data and nobody else\'s', async () => {
   await denied(query(GUEST, `select public.delete_my_account()`), /permission denied/, 'guest deletes');
   await denied(query(lena, `select public.remove_member($1)`, [bob.uid]), /Only the lead pastor/, 'leader removes a member');

@@ -7,13 +7,14 @@ import * as Clipboard from 'expo-clipboard';
 import { useTabBarHeight } from '../navigation/tabBarHeight';
 import { KeyboardChatScrollView, KeyboardGestureArea, KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { colors, fonts, radius, space } from '../theme';
 import { Avatar, AvatarStack, Composer, Ionicons, MediaTile, RoleBadge, Txt } from '../components/ui';
 import { SheetOption, useOverlay } from '../components/overlay';
 import { REACTION_EMOJIS, useStore } from '../data/store';
 import { formatDayShort, formatTime, toISODate, todayISO } from '../lib/dates';
 import { tapFeedback } from '../lib/haptics';
+import { setChatOpen } from '../lib/push';
 import { frequentEmojis, quickEmojis, rememberEmoji } from '../lib/emojiUsage';
 import type { ChatMessage, MediaItem } from '../data/types';
 
@@ -25,6 +26,13 @@ export function ChatScreen() {
   const { openSheet } = useOverlay();
   const listRef = useRef<FlatList<ChatMessage>>(null);
   const messages = s.db.chat.filter((m) => !s.blocked.includes(m.userId));
+
+  useFocusEffect(
+    useCallback(() => {
+      setChatOpen(true);
+      return () => setChatOpen(false);
+    }, []),
+  );
 
   // Текст в поле ввода и правка: «Edit» подставляет старый текст в поле, как в мессенджерах
   const [text, setText] = useState('');

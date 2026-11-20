@@ -25,7 +25,7 @@ Run lint and typecheck before declaring any task done.
 
 ## Navigation & Routing
 
-- This project uses **React Navigation** directly (`@react-navigation/native`, bottom-tabs, native-stack), NOT Expo Router. Reason: the web build is also published as a clickable preview link, and URL-based routing breaks there.
+- This project uses **React Navigation** directly (`@react-navigation/native`, material-top-tabs with the bar at the bottom so sections swipe, native-stack), NOT Expo Router. Reason: the web build is also published as a clickable preview link, and URL-based routing breaks there.
 - Screens live in `src/screens/`, navigators in `src/navigation/`, shared UI in `src/components/`, design tokens in `src/theme.ts`, data model in `src/data/`.
 
 ## Building with EAS

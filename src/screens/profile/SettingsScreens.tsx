@@ -1,17 +1,33 @@
 // Уведомления, конфиденциальность, заблокированные.
 
-import React from 'react';
-import { View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { AppState, View } from 'react-native';
 import { colors, space } from '../../theme';
 import { Avatar, Button, Card, Empty, Header, Ionicons, Screen, ToggleRow, Txt } from '../../components/ui';
 import { useStore } from '../../data/store';
+import { openPhoneSettings, pushPermission } from '../../lib/push';
 
 export function NotificationsScreen() {
   const { notif, setNotif } = useStore();
+  // Если уведомления выключены в настройках самого телефона, переключатели ниже ничего не дадут — говорим об этом прямо
+  const [blockedOnPhone, setBlockedOnPhone] = useState(false);
+  useEffect(() => {
+    const check = () => { pushPermission().then((p) => setBlockedOnPhone(p === 'denied')); };
+    check();
+    const sub = AppState.addEventListener('change', (state) => { if (state === 'active') check(); });
+    return () => sub.remove();
+  }, []);
   return (
     <Screen padded={false}>
       <Header title="Notifications" />
       <View style={{ paddingHorizontal: space.xl, paddingTop: space.sm }}>
+        {blockedOnPhone ? (
+          <Card bg={colors.sunSoft} style={{ marginBottom: space.lg }}>
+            <Txt v="title">Notifications are off on this phone</Txt>
+            <Txt v="small" style={{ marginTop: 4, marginBottom: space.md }}>Turn them on in your phone settings to get anything from us.</Txt>
+            <Button title="Open settings" icon="settings-outline" variant="dark" small onPress={openPhoneSettings} />
+          </Card>
+        ) : null}
         <Card style={{ paddingVertical: 4 }}>
           <ToggleRow title="Daily word" subtitle="A short word each day" value={notif.dailyWord} onChange={(v) => setNotif({ dailyWord: v })} />
           <ToggleRow title="Group chat" subtitle="New messages" value={notif.chat} onChange={(v) => setNotif({ chat: v })} />

@@ -1,10 +1,13 @@
 // Вся навигация: экраны входа, пять вкладок и внутренние экраны.
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { colors } from '../theme';
 import { useStore } from '../data/store';
+import { onPushOpened } from '../lib/push';
 import { TabBar } from './TabBar';
 import { TabBarHeightProvider } from './tabBarHeight';
 import type { RootStackParamList, TabParamList } from './types';
@@ -57,6 +60,22 @@ function Tabs() {
 
 export function RootNavigator() {
   const { me, needsName } = useStore();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const signedIn = !!me && !needsName;
+
+  // Нажали на уведомление — открываем то, о чём оно: чат, пост дня или событие
+  useEffect(() => {
+    if (!signedIn) return;
+    return onPushOpened((data) => {
+      setTimeout(() => {
+        if (data.type === 'chat') navigation.navigate('Tabs', { screen: 'Chat' });
+        else if (data.type === 'post' && data.id) navigation.navigate('Post', { postId: data.id });
+        else if (data.type === 'event' && data.id) navigation.navigate('EventDetail', { eventId: data.id });
+        else navigation.navigate('Tabs', { screen: 'Home' });
+      }, 300); // даём экранам появиться, если приложение только что открылось
+    });
+  }, [signedIn, navigation]);
+
   if (me && needsName) return <NameScreen />;
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>

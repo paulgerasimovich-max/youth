@@ -35,7 +35,8 @@
           "cameraPermission": "Lets you take photos to share with your group.",
           "microphonePermission": false
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "extra": {
       "eas": {
