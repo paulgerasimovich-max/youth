@@ -36,6 +36,12 @@
           "microphonePermission": false
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "5ff701ee-b0b5-49c6-8227-c740b742adf9"
+      }
+    },
+    "owner": "woodmark-youth"
   }
 }
