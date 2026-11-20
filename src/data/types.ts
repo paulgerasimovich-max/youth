@@ -7,6 +7,7 @@ export interface User {
   name: string;
   birthday?: string; // «ММ-ДД» — по желанию, без года
   role: Role;
+  agreed?: boolean; // подтвердил возраст 13+ и принял правила группы
 }
 
 // emoji -> список id людей, поставивших реакцию

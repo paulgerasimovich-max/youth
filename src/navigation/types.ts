@@ -25,6 +25,7 @@ export type RootStackParamList = {
   AlbumForm: undefined;
   Notifications: undefined;
   Privacy: undefined;
+  Rules: undefined;
   Blocked: undefined;
   // лидерам
   Sermons: undefined;

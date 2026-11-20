@@ -10,6 +10,7 @@ import { anonClient, supabase } from '../lib/supabase';
 import { loadJSON, saveJSON } from '../lib/deviceStore';
 import { pickFromLibrary, takePhoto, uploadMedia } from '../lib/media';
 import { getPushToken } from '../lib/push';
+import { REVIEW_CODE, REVIEW_EMAIL } from '../lib/review';
 import { combine, hhmmOf, toBirthday, todayISO } from '../lib/dates';
 import { mediaTints } from '../theme';
 import type { Db } from './demo';
@@ -158,7 +159,7 @@ async function fetchEverything(userId: string, secrets: DeviceSecret[]) {
   }
 
   const db: Db = {
-    users: profiles.map((p) => ({ id: p.id, name: p.name, role: p.role as Role, birthday: birthdayOf[p.id] })),
+    users: profiles.map((p) => ({ id: p.id, name: p.name, role: p.role as Role, birthday: birthdayOf[p.id], agreed: !!p.agreed_at })),
     sermons: sermons.map((s) => ({ id: s.id, title: s.title, preacher: s.preacher, date: s.date, paragraphs: s.paragraphs })),
     posts: posts.map((p) => ({
       id: p.id, sermonId: p.sermon_id ?? '', day: p.day, time: hhmmOf(p.publish_at), quote: p.quote, note: p.note ?? undefined,
@@ -202,7 +203,8 @@ async function fetchEverything(userId: string, secrets: DeviceSecret[]) {
   };
 }
 
-export function LiveStoreProvider({ children }: { children: React.ReactNode }) {
+// onReviewAccess — проверяющий из магазина приложений ввёл свой адрес и код: показываем ему демо-группу (см. lib/review.ts)
+export function LiveStoreProvider({ children, onReviewAccess }: { children: React.ReactNode; onReviewAccess: () => void }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
@@ -381,14 +383,27 @@ export function LiveStoreProvider({ children }: { children: React.ReactNode }) {
       isDemo: false,
       ready: deviceLoaded && sessionChecked && (userId === null || loadedFor === userId),
       needsName: !!me && me.name === NEW_NAME,
+      needsAgreement: !!me && !me.agreed,
+      acceptRules: () => {
+        patch((d) => ({ users: d.users.map((u) => (u.id === myId ? { ...u, agreed: true } : u)) }));
+        act(() => supabase.rpc('accept_rules'));
+      },
 
       requestCode: async (email, name) => {
+        if (email === REVIEW_EMAIL) return null; // проверяющему письмо не шлём — у него готовый код
+        // Имя приходит только с экрана регистрации, а он не пускает дальше без двух галочек («мне 13+» и «принимаю правила») —
+        // поэтому вместе с именем уходит и отметка о согласии. Сервер запишет её в профиль нового аккаунта.
         const { error } = await supabase.auth.signInWithOtp({
-          email, options: { shouldCreateUser: true, data: name ? { name } : undefined },
+          email, options: { shouldCreateUser: true, data: name ? { name, agreed: true } : undefined },
         });
         return error ? friendlyAuthError(error.message) : null;
       },
       verifyCode: async (email, code, name) => {
+        if (email === REVIEW_EMAIL) {
+          if (code !== REVIEW_CODE) return friendlyAuthError('invalid');
+          onReviewAccess();
+          return null;
+        }
         const { data, error } = await supabase.auth.verifyOtp({ email, token: code, type: 'email' });
         if (error || !data.user) return friendlyAuthError(error?.message ?? 'invalid');
         if (name) {
@@ -717,7 +732,7 @@ export function LiveStoreProvider({ children }: { children: React.ReactNode }) {
       toast,
       showToast,
     };
-  }, [db, userId, deviceSecrets, seen, deviceLoaded, sessionChecked, loadedFor, blocked, dismissedGreetings, notif, toast, showToast, reload, saveSecrets]);
+  }, [db, userId, deviceSecrets, seen, deviceLoaded, sessionChecked, loadedFor, blocked, dismissedGreetings, notif, toast, showToast, reload, saveSecrets, onReviewAccess]);
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
 }

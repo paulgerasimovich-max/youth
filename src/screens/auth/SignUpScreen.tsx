@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 import { colors, space } from '../../theme';
-import { Button, Field, Header, Ionicons, Screen, Txt } from '../../components/ui';
+import { Button, CheckRow, Field, Header, Ionicons, Screen, Txt } from '../../components/ui';
 import { useStore } from '../../data/store';
 import type { ScreenProps } from '../../navigation/types';
 
@@ -13,7 +13,10 @@ export function SignUpScreen({ navigation }: ScreenProps<'SignUp'>) {
   const { requestCode } = useStore();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const ready = name.trim().length > 0 && looksLikeEmail(email);
+  // Приложение только для 13+, и без согласия с правилами группы в него не пускаем
+  const [age, setAge] = useState(false);
+  const [rules, setRules] = useState(false);
+  const ready = name.trim().length > 0 && looksLikeEmail(email) && age && rules;
 
   const send = async () => {
     setBusy(true);
@@ -45,7 +48,14 @@ export function SignUpScreen({ navigation }: ScreenProps<'SignUp'>) {
             autoCorrect={false}
           />
 
-          {error ? <Txt v="smallBold" color={colors.danger} style={{ marginBottom: space.md }}>{error}</Txt> : null}
+          <CheckRow checked={age} onChange={setAge} label="I'm 13 or older" />
+          <CheckRow checked={rules} onChange={setRules} label="I'll follow the group rules">
+            <Pressable onPress={() => navigation.navigate('Rules')} hitSlop={10} style={{ marginLeft: 'auto' }}>
+              <Txt v="smallBold" color={colors.accent}>Read them</Txt>
+            </Pressable>
+          </CheckRow>
+
+          {error ? <Txt v="smallBold" color={colors.danger} style={{ marginVertical: space.md }}>{error}</Txt> : null}
           <Button title={busy ? 'Sending...' : 'Send me a code'} icon="mail" disabled={!ready || busy} onPress={send} style={{ marginTop: space.sm }} />
 
           <View style={{ flexDirection: 'row', gap: 10, backgroundColor: colors.plumSoft, padding: 12, borderRadius: 14, marginTop: space.xl }}>

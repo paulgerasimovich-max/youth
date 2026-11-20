@@ -381,6 +381,31 @@ test('a push address can be registered only for yourself', async () => {
 });
 
 // ============================================================
+// Возраст 13+ и правила группы
+// ============================================================
+test('"I am 13 or older and I accept the rules" is recorded once, by the person themselves', async () => {
+  const ticked = await createUser('Tina', { agreed: true });
+  const skipped = await createUser('Sam');
+  const at = async (u) => (await one(ADMIN, `select agreed_at from public.profiles where id = $1`, [u.uid])).agreed_at;
+  assert(await at(ticked), 'ticking both boxes at sign-up is recorded');
+  equal(await at(skipped), null, 'no record without it');
+
+  await denied(query(skipped, `update public.profiles set agreed_at = now() where id = $1`, [skipped.uid]), /permission denied/, 'write the mark directly');
+  await denied(query(ticked, `update public.profiles set agreed_at = null where id = $1`, [ticked.uid]), /permission denied/, 'remove the mark');
+  await denied(query(GUEST, `select public.accept_rules()`), /permission denied/, 'guest accepts rules');
+
+  await query(ticked, `select public.accept_rules()`); // чужую отметку этим не поставить
+  equal(await at(skipped), null, 'accepting applies only to yourself');
+  await query(skipped, `select public.accept_rules()`);
+  const first = await at(skipped);
+  assert(first, 'accepted on the separate screen');
+  await query(skipped, `select public.accept_rules()`);
+  equal(await at(skipped), first, 'the first moment is kept');
+
+  await query(ADMIN, `delete from auth.users where id = any($1::uuid[])`, [[ticked.uid, skipped.uid]]);
+});
+
+// ============================================================
 // Push-уведомления: кому уходят, а кому нет
 // ============================================================
 // Что ушло бы на телефоны с момента последней проверки: список { to, title, body, type }

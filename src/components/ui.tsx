@@ -430,6 +430,32 @@ export function Row({ icon, iconBg = colors.surfaceAlt, iconColor = colors.ink, 
   );
 }
 
+// Галочка с подписью (подтверждения при регистрации). children — например, ссылка «Read them» справа от подписи.
+export function CheckRow({ checked, onChange, label, children }: {
+  checked: boolean; onChange: (v: boolean) => void; label: string; children?: React.ReactNode;
+}) {
+  return (
+    <Pressable
+      onPress={() => onChange(!checked)}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+      accessibilityLabel={label}
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 }}
+    >
+      <View
+        style={{
+          width: 26, height: 26, borderRadius: 9, borderWidth: 2, alignItems: 'center', justifyContent: 'center',
+          borderColor: checked ? colors.accent : colors.line, backgroundColor: checked ? colors.accent : colors.surface,
+        }}
+      >
+        {checked ? <Ionicons name="checkmark" size={17} color={colors.white} /> : null}
+      </View>
+      <Txt v="bodyBold" style={{ flexShrink: 1 }}>{label}</Txt>
+      {children}
+    </Pressable>
+  );
+}
+
 export function ToggleRow({ title, subtitle, value, onChange, last }: {
   title: string; subtitle?: string; value: boolean; onChange: (v: boolean) => void; last?: boolean;
 }) {

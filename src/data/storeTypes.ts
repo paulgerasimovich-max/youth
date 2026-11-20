@@ -33,6 +33,8 @@ export interface Store {
   verifyCode: (email: string, code: string, name?: string) => Promise<string | null>;
   // человек вошёл, но ещё не назвал себя (вход без регистрации)
   needsName: boolean;
+  needsAgreement: boolean; // вошёл, но ещё не подтвердил 13+ и правила группы
+  acceptRules: () => void;
   signOut: () => void;
   deleteAccount: () => void;
   updateMe: (patch: Partial<User>) => void;

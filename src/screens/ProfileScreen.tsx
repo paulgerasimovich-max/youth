@@ -79,6 +79,7 @@ export function ProfileScreen() {
         <Row icon="images" title="Photos and videos" subtitle={`${s.db.albums.length} albums`} onPress={() => nav.navigate('Albums')} />
         <Row icon="notifications" title="Notifications" onPress={() => nav.navigate('Notifications')} />
         <Row icon="shield-checkmark" title="Privacy" onPress={() => nav.navigate('Privacy')} />
+        <Row icon="heart" title="Group rules" onPress={() => nav.navigate('Rules')} />
         <Row icon="hand-left" title="Blocked people" subtitle={s.blocked.length ? `${s.blocked.length} blocked` : undefined} last onPress={() => nav.navigate('Blocked')} />
       </Card>
 

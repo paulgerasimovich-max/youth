@@ -20,10 +20,12 @@ function toggleReactionMap(map: Record<string, string[]>, emoji: string, userId:
   return next;
 }
 
-export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
+// signedIn + onExit — когда демо открыто для проверяющего из магазина приложений поверх настоящего приложения:
+// он сразу внутри, а «выйти» возвращает к настоящему экрану входа.
+export function DemoStoreProvider({ children, signedIn, onExit }: { children: React.ReactNode; signedIn?: boolean; onExit?: () => void }) {
   const [initial] = useState(buildDemoDb);
   const [db, setDb] = useState<Db>(initial.db);
-  const [meId, setMeId] = useState<string | null>(null);
+  const [meId, setMeId] = useState<string | null>(signedIn ? ME_ID : null);
   const [deviceSecrets, setDeviceSecrets] = useState<DeviceSecret[]>(initial.deviceSecrets);
   // сколько сообщений в каждом своём диалоге участник уже видел
   const [seen, setSeen] = useState<Record<string, number>>({ t_mine: 3 });
@@ -64,14 +66,16 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
       isDemo: true,
       ready: true,
       needsName: false,
+      needsAgreement: false,
+      acceptRules: () => {},
       requestCode: async () => null,
       verifyCode: async (_email, _code, name) => {
         if (name) patch((d) => ({ users: d.users.map((u) => (u.id === ME_ID ? { ...u, name } : u)) }));
         setMeId(ME_ID);
         return null;
       },
-      signOut: () => setMeId(null),
-      deleteAccount: () => setMeId(null),
+      signOut: () => { setMeId(null); onExit?.(); },
+      deleteAccount: () => { setMeId(null); onExit?.(); },
       updateMe: (p) => patch((d) => ({ users: d.users.map((u) => (u.id === myId ? { ...u, ...p } : u)) })),
       setDemoRole: (role) => patch((d) => ({ users: d.users.map((u) => (u.id === myId ? { ...u, role } : u)) })),
 
@@ -218,7 +222,7 @@ export function DemoStoreProvider({ children }: { children: React.ReactNode }) {
       toast,
       showToast,
     };
-  }, [db, meId, deviceSecrets, seen, blocked, dismissedGreetings, notif, toast, showToast]);
+  }, [db, meId, deviceSecrets, seen, blocked, dismissedGreetings, notif, toast, showToast, onExit]);
 
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
 }

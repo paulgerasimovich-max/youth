@@ -69,7 +69,7 @@ We do not share your information with anyone else unless the law requires it.
 
 ## Children and teens
 
-This app is only for people who are **13 or older**. You confirm your age when you join.
+This app is only for people who are **13 or older**. You confirm your age when you join, and we keep the date you confirmed it and agreed to the group rules.
 
 We do not knowingly collect information from anyone under 13. If we learn that someone under 13 has an account, we delete it. If you think a child under 13 is using the app, email hello@woodmarkyouth.com and we will take care of it.
 

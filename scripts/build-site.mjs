@@ -69,12 +69,29 @@ const page = `<!doctype html>
 <main class="wrap"><article class="doc">
 ${out.join('\n')}
 </article></main>
-<footer><div class="wrap"><span>Youth Group · Woodmark Church, Kirkland, WA</span><span><a href="/">Home</a> · <a href="/privacy/">Privacy Policy</a></span></div></footer>
+<footer><div class="wrap"><span>Youth Group · Woodmark Church, Kirkland, WA</span><span><a href="/">Home</a> · <a href="/rules/">Group rules</a> · <a href="/privacy/">Privacy Policy</a></span></div></footer>
 </body>
 </html>
 `;
 fs.mkdirSync(path.join(root, 'site/privacy'), { recursive: true });
 fs.writeFileSync(path.join(root, 'site/privacy/index.html'), page);
 fs.copyFileSync(path.join(root, 'assets/favicon.png'), path.join(root, 'site/favicon.png'));
+// Правила группы — из того же файла, что показывает приложение
+const rules = JSON.parse(fs.readFileSync(path.join(root, 'src/data/rules.json'), 'utf8'));
+const rulesHtml = [
+  `<h1>${esc(rules.title)}</h1>`,
+  `<p>${esc(rules.intro)}</p>`,
+  `<ul>${rules.rules.map((r) => `<li><strong>${esc(r.title)}.</strong> ${esc(r.text)}</li>`).join('')}</ul>`,
+  `<h2 id="breaking-the-rules">${esc(rules.breakTitle)}</h2>`,
+  `<p>${esc(rules.breakText)}</p>`,
+  `<p><em>${esc(rules.age)}</em></p>`,
+].join('\n');
+const rulesPage = page
+  .replace('<title>Privacy Policy · Youth Group</title>', '<title>Group rules · Youth Group</title>')
+  .replace("What the Youth Group app keeps about you, and what it doesn't.", 'The rules everyone agrees to when they join the Youth Group app.')
+  .replace(out.join('\n'), rulesHtml);
+fs.mkdirSync(path.join(root, 'site/rules'), { recursive: true });
+fs.writeFileSync(path.join(root, 'site/rules/index.html'), rulesPage);
+
 const left = (page.match(/<mark>/g) ?? []).length;
-console.log(`site/privacy/index.html written${left ? ` — ${left} place(s) still in [brackets]` : ''}`);
+console.log(`site/privacy and site/rules written${left ? ` — ${left} place(s) still in [brackets]` : ''}`);

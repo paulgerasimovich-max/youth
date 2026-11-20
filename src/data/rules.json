@@ -1,0 +1,14 @@
+{
+  "title": "Group rules",
+  "intro": "This is our space. Let's keep it a good one.",
+  "rules": [
+    { "title": "Be kind", "text": "No bullying, hate, threats or picking on anyone. Ever." },
+    { "title": "Keep it clean", "text": "No sexual stuff, violence, drugs or anything illegal." },
+    { "title": "Respect people's privacy", "text": "Don't share someone's photos, messages or personal info without asking them first." },
+    { "title": "Be you", "text": "Use your real name. Don't pretend to be someone else." },
+    { "title": "No spam", "text": "No ads, chain messages or flooding the chat." }
+  ],
+  "breakTitle": "If someone breaks the rules",
+  "breakText": "Report the message or block the person. It takes two taps. Leaders look at every report within 24 hours. They can remove posts and remove people from the group. We have zero tolerance for abuse and for content that crosses the line.",
+  "age": "You have to be 13 or older to use this app."
+}

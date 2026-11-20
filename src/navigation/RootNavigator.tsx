@@ -30,6 +30,8 @@ import { MyDetailsScreen } from '../screens/profile/MyDetailsScreen';
 import { AlbumFormScreen, AlbumScreen, AlbumsScreen } from '../screens/profile/AlbumScreens';
 import { MediaViewScreen } from '../screens/MediaViewScreen';
 import { NameScreen } from '../screens/auth/NameScreen';
+import { AgreeScreen } from '../screens/auth/AgreeScreen';
+import { RulesScreen } from '../screens/RulesScreen';
 import { BlockedScreen, NotificationsScreen, PrivacyScreen } from '../screens/profile/SettingsScreens';
 import { PostFormScreen, SermonFormScreen, SermonScreen, SermonsScreen } from '../screens/leader/SermonScreens';
 import { BirthdaysScreen, GreetingFormScreen, MembersScreen } from '../screens/leader/PeopleScreens';
@@ -59,9 +61,9 @@ function Tabs() {
 }
 
 export function RootNavigator() {
-  const { me, needsName } = useStore();
+  const { me, needsName, needsAgreement } = useStore();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const signedIn = !!me && !needsName;
+  const signedIn = !!me && !needsName && !needsAgreement;
 
   // Нажали на уведомление — открываем то, о чём оно: чат, пост дня или событие
   useEffect(() => {
@@ -77,6 +79,7 @@ export function RootNavigator() {
   }, [signedIn, navigation]);
 
   if (me && needsName) return <NameScreen />;
+  if (me && needsAgreement) return <AgreeScreen />;
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }}>
       {!me ? (
@@ -85,6 +88,7 @@ export function RootNavigator() {
           <Stack.Screen name="SignUp" component={SignUpScreen} />
           <Stack.Screen name="SignIn" component={SignInScreen} />
           <Stack.Screen name="VerifyCode" component={VerifyCodeScreen} />
+          <Stack.Screen name="Rules" component={RulesScreen} />
         </>
       ) : (
         <>
@@ -100,6 +104,7 @@ export function RootNavigator() {
           <Stack.Screen name="Album" component={AlbumScreen} />
           <Stack.Screen name="MediaView" component={MediaViewScreen} options={{ animation: 'fade' }} />
           <Stack.Screen name="AlbumForm" component={AlbumFormScreen} />
+          <Stack.Screen name="Rules" component={RulesScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="Privacy" component={PrivacyScreen} />
           <Stack.Screen name="Blocked" component={BlockedScreen} />
