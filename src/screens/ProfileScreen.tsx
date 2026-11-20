@@ -57,7 +57,7 @@ export function ProfileScreen() {
           <Txt v="label" style={styles.groupLabel}>Leader tools</Txt>
           <Card style={styles.group}>
             <Row icon="book" iconBg={colors.sunSoft} iconColor="#8A6300" title="Sermons and daily posts" subtitle="Plan the word for each day" onPress={() => nav.navigate('Sermons')} />
-            <Row icon="people" iconBg={colors.plumSoft} iconColor={colors.plum} title="Members" subtitle={`${s.db.users.length} people`} onPress={() => nav.navigate('Members')} />
+            <Row icon="people" iconBg={colors.plumSoft} iconColor={colors.plum} title="Members" subtitle={s.db.users.length === 1 ? '1 person' : `${s.db.users.length} people`} onPress={() => nav.navigate('Members')} />
             <Row icon="gift" iconBg={colors.accentSoft} iconColor={colors.accent} title="Birthdays" subtitle="See who's next and send a note" onPress={() => nav.navigate('Birthdays')} />
             <Row
               icon="flag" iconBg={colors.dangerSoft} iconColor={colors.danger} title="Reports" subtitle="Things people flagged" last

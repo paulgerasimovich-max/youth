@@ -41,7 +41,7 @@ export function ChatScreen() {
       <View style={[styles.header, { paddingTop: insets.top + space.md }]}>
         <View style={{ flex: 1 }}>
           <Txt v="h1">Group chat</Txt>
-          <Txt v="small">{s.db.users.length} people</Txt>
+          <Txt v="small">{s.db.users.length === 1 ? '1 person' : `${s.db.users.length} people`}</Txt>
         </View>
         <AvatarStack users={s.db.users.slice(1, 6)} max={4} size={30} ring={colors.bg} />
       </View>

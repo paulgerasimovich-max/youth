@@ -35,7 +35,7 @@ export function MembersScreen(_props: ScreenProps<'Members'>) {
       <Header title="Members" />
       <View style={{ paddingHorizontal: space.xl, paddingTop: space.sm }}>
         <Txt v="small" style={{ marginBottom: space.md }}>
-          {people.length} people in the group. {s.isAdmin ? 'Tap someone to make them a leader.' : 'Only the lead pastor can pick leaders.'}
+          {people.length === 1 ? '1 person' : `${people.length} people`} in the group. {s.isAdmin ? 'Tap someone to make them a leader.' : 'Only the lead pastor can pick leaders.'}
         </Txt>
         <Card style={{ paddingVertical: 4 }}>
           {people.map((u, i) => {
