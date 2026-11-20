@@ -409,6 +409,9 @@ export function LiveStoreProvider({ children, onReviewAccess }: { children: Reac
         if (name) {
           // если база создала профиль без имени — дописываем
           await supabase.from('profiles').update({ name }).eq('id', data.user.id).eq('name', NEW_NAME);
+          // Человек пришёл с экрана регистрации, значит обе галочки он только что поставил. Если аккаунт на эту почту
+          // уже был (и отметки в нём нет), записываем её сейчас — чтобы не спрашивать то же самое второй раз.
+          await supabase.rpc('accept_rules');
         }
         return null;
       },
