@@ -1,7 +1,7 @@
 // Общий чат: сообщения, фото/видео, реакции, переслать, пожаловаться, заблокировать.
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, FlatList, Keyboard, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, FlatList, Keyboard, PanResponder, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { ScrollViewProps, TextInput } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
@@ -15,7 +15,7 @@ import { REACTION_EMOJIS, useStore } from '../data/store';
 import { formatDayShort, formatTime, toISODate, todayISO } from '../lib/dates';
 import { tapFeedback } from '../lib/haptics';
 import { frequentEmojis, quickEmojis, rememberEmoji } from '../lib/emojiUsage';
-import type { ChatMessage } from '../data/types';
+import type { ChatMessage, MediaItem } from '../data/types';
 
 const INPUT_ID = 'chat-input';
 
@@ -30,7 +30,10 @@ export function ChatScreen() {
   const [text, setText] = useState('');
   const [editing, setEditing] = useState<ChatMessage | null>(null);
   const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
+  // Ответ на конкретное сообщение: свайп по нему (или «Reply» в меню) — над полем ввода появляется, кому отвечаем
+  const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
   const startEdit = useCallback((m: ChatMessage) => {
+    setReplyingTo(null);
     setEditing(m);
     setText(m.body ?? '');
     setTimeout(() => inputRef.current?.focus(), 60);
@@ -39,15 +42,44 @@ export function ChatScreen() {
     setEditing(null);
     setText('');
   };
+  const startReply = useCallback((m: ChatMessage) => {
+    if (m.id.startsWith('tmp-')) return; // ещё не дошло до сервера
+    setEditing((e) => {
+      if (e) setText('');
+      return null;
+    });
+    setReplyingTo(m);
+    setTimeout(() => inputRef.current?.focus(), 60);
+  }, []);
   const submit = (value: string) => {
     if (editing) {
       if (value !== editing.body) s.editChat(editing.id, value);
       setEditing(null);
     } else {
-      s.sendChat({ body: value });
+      s.sendChat({ body: value, replyTo: replyingTo?.id });
+      setReplyingTo(null);
     }
   };
 
+  // Нажали на цитату в ответе — прокручиваем к исходному сообщению и коротко подсвечиваем его
+  const [flashId, setFlashId] = useState<string | null>(null);
+  const jumpTo = useCallback(
+    (id: string) => {
+      const index = messages.findIndex((m) => m.id === id);
+      if (index < 0) return;
+      listRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.4 });
+      setFlashId(id);
+      setTimeout(() => setFlashId(null), 900);
+    },
+    [messages],
+  );
+
+  // Держимся у последних сообщений, как в мессенджерах: если человек внизу чата, то новое сообщение, плашка ответа
+  // или изменение высоты списка не уводят низ из вида. Если он листает вверх — не дёргаем.
+  const atEnd = useRef(true);
+  const stickToEnd = (animated: boolean) => {
+    if (atEnd.current) listRef.current?.scrollToEnd({ animated });
+  };
   useEffect(() => {
     const t = setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 60);
     return () => clearTimeout(t);
@@ -61,14 +93,13 @@ export function ChatScreen() {
     [tabBarHeight],
   );
 
-  const share = async (kind: 'photo' | 'video') => {
-    const [media] = await s.pickMedia(kind);
-    if (media) s.sendChat({ media });
+  const sendMedia = (media?: MediaItem) => {
+    if (!media) return;
+    s.sendChat({ media, replyTo: replyingTo?.id });
+    setReplyingTo(null);
   };
-  const snap = async () => {
-    const [media] = await s.takePhoto();
-    if (media) s.sendChat({ media });
-  };
+  const share = async (kind: 'photo' | 'video') => sendMedia((await s.pickMedia(kind))[0]);
+  const snap = async () => sendMedia((await s.takePhoto())[0]);
   const attach = () => {
     Keyboard.dismiss();
     openSheet({
@@ -97,6 +128,13 @@ export function ChatScreen() {
         data={messages}
         keyExtractor={(m) => m.id}
         renderScrollComponent={renderScroll}
+        onScroll={({ nativeEvent: e }) => {
+          atEnd.current = e.contentSize.height - e.contentOffset.y - e.layoutMeasurement.height < 120;
+        }}
+        scrollEventThrottle={64}
+        onContentSizeChange={() => stickToEnd(false)}
+        onLayout={() => stickToEnd(false)}
+        onScrollToIndexFailed={({ averageItemLength, index }) => listRef.current?.scrollToOffset({ offset: averageItemLength * index, animated: true })}
         contentContainerStyle={{ paddingHorizontal: space.lg, paddingVertical: space.md }}
         showsVerticalScrollIndicator={false}
         renderItem={({ item, index }) => {
@@ -110,7 +148,14 @@ export function ChatScreen() {
                   <Txt v="smallBold" color={colors.muted}>{day === todayISO() ? 'Today' : formatDayShort(day)}</Txt>
                 </View>
               ) : null}
-              <Bubble message={item} showAuthor={newDay || prev?.userId !== item.userId} onEdit={startEdit} />
+              <Bubble
+                message={item}
+                showAuthor={newDay || prev?.userId !== item.userId}
+                onEdit={startEdit}
+                onReply={startReply}
+                onJump={jumpTo}
+                flash={flashId === item.id}
+              />
             </>
           );
         }}
@@ -138,6 +183,17 @@ export function ChatScreen() {
                   <Ionicons name="close" size={20} color={colors.muted} />
                 </Pressable>
               </View>
+            ) : replyingTo ? (
+              <View style={styles.editBar}>
+                <Ionicons name="arrow-undo-outline" size={18} color={colors.accent} />
+                <View style={{ flex: 1 }}>
+                  <Txt v="smallBold" color={colors.accent}>Replying to {s.nameOf(replyingTo.userId).split(' ')[0]}</Txt>
+                  <Txt v="small" numberOfLines={1}>{snippet(replyingTo)}</Txt>
+                </View>
+                <Pressable onPress={() => setReplyingTo(null)} hitSlop={10} accessibilityLabel="Cancel reply">
+                  <Ionicons name="close" size={20} color={colors.muted} />
+                </Pressable>
+              </View>
             ) : null
           }
           left={
@@ -154,7 +210,44 @@ export function ChatScreen() {
   );
 }
 
-function Bubble({ message, showAuthor, onEdit }: { message: ChatMessage; showAuthor: boolean; onEdit: (m: ChatMessage) => void }) {
+// Короткая подпись сообщения для цитаты
+function snippet(m: ChatMessage): string {
+  return m.body ?? (m.media?.kind === 'video' ? 'Video' : 'Photo');
+}
+
+const SWIPE_MAX = 72; // насколько сообщение уезжает за пальцем
+const SWIPE_TRIGGER = 52; // дальше этого — отпускание означает «ответить»
+
+// Жест «свайп по сообщению»: сообщение едет за пальцем, у порога — короткая вибрация, отпустили за порогом — onTrigger.
+function createReplySwipe(dragX: Animated.Value, onTrigger: () => void) {
+  const back = () => Animated.spring(dragX, { toValue: 0, useNativeDriver: Platform.OS !== 'web', speed: 22, bounciness: 6 }).start();
+  let armed = false; // палец уже за порогом
+  return PanResponder.create({
+    onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 14 && Math.abs(g.dx) > Math.abs(g.dy) * 2,
+    onPanResponderTerminationRequest: () => false,
+    onPanResponderMove: (_, g) => {
+      const x = Math.max(-SWIPE_MAX, Math.min(SWIPE_MAX, g.dx * 0.6));
+      dragX.setValue(x);
+      const past = Math.abs(x) >= SWIPE_TRIGGER;
+      if (past && !armed) tapFeedback();
+      armed = past;
+    },
+    onPanResponderRelease: () => {
+      if (armed) onTrigger();
+      armed = false;
+      back();
+    },
+    onPanResponderTerminate: () => {
+      armed = false;
+      back();
+    },
+  });
+}
+
+function Bubble({ message, showAuthor, onEdit, onReply, onJump, flash }: {
+  message: ChatMessage; showAuthor: boolean; flash: boolean;
+  onEdit: (m: ChatMessage) => void; onReply: (m: ChatMessage) => void; onJump: (id: string) => void;
+}) {
   const nav = useNavigation();
   const s = useStore();
   const { openSheet, openMenu } = useOverlay();
@@ -170,6 +263,21 @@ function Bubble({ message, showAuthor, onEdit }: { message: ChatMessage; showAut
   const pop = (to: number) =>
     Animated.spring(scale, { toValue: to, useNativeDriver: Platform.OS !== 'web', speed: 28, bounciness: 10 }).start();
 
+  // Свайп по сообщению в любую сторону — ответить на него. Сообщение едет за пальцем, у порога — короткая вибрация.
+  const [dragX] = useState(() => new Animated.Value(0));
+  const pan = useMemo(() => createReplySwipe(dragX, () => onReply(message)), [dragX, message, onReply]);
+
+  // Подсветка, когда к сообщению прыгнули из цитаты
+  useEffect(() => {
+    if (!flash) return;
+    Animated.sequence([
+      Animated.spring(scale, { toValue: 1.06, useNativeDriver: Platform.OS !== 'web', speed: 28, bounciness: 10 }),
+      Animated.spring(scale, { toValue: 1, useNativeDriver: Platform.OS !== 'web', speed: 28, bounciness: 10 }),
+    ]).start();
+  }, [flash, scale]);
+
+  const quoted = message.replyTo ? s.db.chat.find((m) => m.id === message.replyTo) : undefined;
+
   const confirmDelete = () =>
     openSheet({
       title: 'Delete this message?',
@@ -181,6 +289,7 @@ function Bubble({ message, showAuthor, onEdit }: { message: ChatMessage; showAut
     const list: SheetOption[] = [];
     const media = message.media;
     const body = message.body;
+    list.push({ label: 'Reply', icon: 'arrow-undo-outline', onPress: () => onReply(message) });
     if (body) {
       list.push({
         label: 'Copy', icon: 'copy-outline',
@@ -195,13 +304,6 @@ function Bubble({ message, showAuthor, onEdit }: { message: ChatMessage; showAut
         onPress: () => nav.navigate('MediaView', { kind: media.kind, uri: media.uri!, path: media.path }),
       });
     }
-    list.push({
-      label: 'Forward', icon: 'arrow-redo-outline',
-      onPress: () => {
-        s.sendChat({ body: message.body, media: message.media, forwardedFrom: message.forwardedFrom ?? user?.name ?? 'Someone' });
-        s.showToast('Forwarded to the chat.');
-      },
-    });
     if (!mine) {
       list.push({ label: 'Report', icon: 'flag-outline', onPress: () => s.report('chat', message.id, message.body ?? 'Photo or video') });
       list.push({ label: `Block ${firstName}`, icon: 'hand-left-outline', danger: true, onPress: () => s.block(message.userId) });
@@ -243,7 +345,18 @@ function Bubble({ message, showAuthor, onEdit }: { message: ChatMessage; showAut
   };
 
   return (
-    <View style={[styles.row, mine ? { justifyContent: 'flex-end' } : null, { marginTop: showAuthor ? 14 : 4 }]}>
+    <View style={{ marginTop: showAuthor ? 14 : 4, justifyContent: 'center' }} {...pan.panHandlers}>
+      <Animated.View
+        style={[styles.replyHint, { left: 4, opacity: dragX.interpolate({ inputRange: [0, SWIPE_TRIGGER], outputRange: [0, 1], extrapolate: 'clamp' }) }]}
+      >
+        <Ionicons name="arrow-undo" size={18} color={colors.accent} />
+      </Animated.View>
+      <Animated.View
+        style={[styles.replyHint, { right: 4, opacity: dragX.interpolate({ inputRange: [-SWIPE_TRIGGER, 0], outputRange: [1, 0], extrapolate: 'clamp' }) }]}
+      >
+        <Ionicons name="arrow-undo" size={18} color={colors.accent} />
+      </Animated.View>
+    <Animated.View style={[styles.row, mine ? { justifyContent: 'flex-end' } : null, { transform: [{ translateX: dragX }] }]}>
       {!mine ? <View style={{ width: 34 }}>{showAuthor ? <Avatar user={user} size={34} /> : null}</View> : null}
       <View style={{ maxWidth: '78%', alignItems: mine ? 'flex-end' : 'flex-start' }}>
         {showAuthor && !mine ? (
@@ -260,6 +373,21 @@ function Bubble({ message, showAuthor, onEdit }: { message: ChatMessage; showAut
             delayLongPress={260}
             style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}
           >
+            {message.replyTo ? (
+              <Pressable
+                onPress={quoted ? () => onJump(quoted.id) : undefined}
+                style={[styles.quote, { borderLeftColor: mine ? colors.white : colors.accent, backgroundColor: mine ? 'rgba(255,255,255,0.18)' : colors.bg }]}
+              >
+                <Text numberOfLines={1} style={{ fontFamily: fonts.bodyBold, fontSize: 12, color: mine ? colors.white : colors.accent }}>
+                  {quoted ? s.nameOf(quoted.userId).split(' ')[0] : 'Earlier message'}
+                </Text>
+                {quoted ? (
+                  <Text numberOfLines={1} style={{ fontFamily: fonts.body, fontSize: 13, color: mine ? 'rgba(255,255,255,0.85)' : colors.inkSoft }}>
+                    {snippet(quoted)}
+                  </Text>
+                ) : null}
+              </Pressable>
+            ) : null}
             {message.forwardedFrom ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 6 }}>
                 <Ionicons name="arrow-redo" size={12} color={mine ? 'rgba(255,255,255,0.8)' : colors.muted} />
@@ -293,6 +421,7 @@ function Bubble({ message, showAuthor, onEdit }: { message: ChatMessage; showAut
           </View>
         ) : null}
       </View>
+    </Animated.View>
     </View>
   );
 }
@@ -312,6 +441,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, height: 26, borderRadius: 13,
     backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.line,
   },
+  replyHint: {
+    position: 'absolute', width: 32, height: 32, borderRadius: 16, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center',
+  },
+  quote: { borderLeftWidth: 3, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5, marginBottom: 6, minWidth: 120 },
   editBar: {
     flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: space.lg, paddingVertical: 8,
     backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.line,

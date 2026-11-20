@@ -87,6 +87,7 @@ export interface ChatMessage {
   reactions: Reactions;
   createdAt: string;
   editedAt?: string; // когда автор поправил текст
+  replyTo?: string; // id сообщения, на которое это отвечает
 }
 
 // ---------- Анонимные вопросы ----------

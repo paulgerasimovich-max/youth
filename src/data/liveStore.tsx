@@ -180,7 +180,7 @@ async function fetchEverything(userId: string, secrets: DeviceSecret[]) {
       id: m.id, userId: m.user_id, body: m.body ?? undefined,
       media: m.media_path ? media(m.id, m.media_kind, m.media_path) : undefined,
       forwardedFrom: m.forwarded_from ?? undefined, reactions: chatR[m.id] ?? {}, createdAt: m.created_at,
-      editedAt: m.edited_at ?? undefined,
+      editedAt: m.edited_at ?? undefined, replyTo: m.reply_to ?? undefined,
     })),
     threads: [...threads.values()],
     greetings: greetings.map((g) => ({ id: g.id, toUserId: g.to_user_id, fromUserId: g.from_user_id ?? '', body: g.body, createdAt: g.created_at })),
@@ -347,7 +347,7 @@ export function LiveStoreProvider({ children }: { children: React.ReactNode }) {
     const secretFor = (threadId: string) => deviceSecrets.find((s) => s.threadId === threadId)?.secret;
     const saveSeen = (next: Record<string, number>) => { setSeen(next); saveJSON(SEEN_KEY, next); };
 
-    const uploadAndSend = async (msg: { body?: string; media?: MediaItem; forwardedFrom?: string }) => {
+    const uploadAndSend = async (msg: { body?: string; media?: MediaItem; forwardedFrom?: string; replyTo?: string }) => {
       let path = msg.media?.path;
       if (msg.media?.local) {
         const uploaded = await uploadMedia(msg.media, `chat/${myId}`);
@@ -357,6 +357,7 @@ export function LiveStoreProvider({ children }: { children: React.ReactNode }) {
       await act(() =>
         supabase.from('chat_messages').insert({
           body: msg.body ?? null, media_kind: path ? msg.media!.kind : null, media_path: path ?? null, forwarded_from: msg.forwardedFrom ?? null,
+          reply_to: msg.replyTo ?? null,
         }),
       );
     };

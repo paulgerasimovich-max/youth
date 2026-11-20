@@ -42,7 +42,7 @@ export interface Store {
   toggleReaction: (target: 'post' | 'chat', id: string, emoji: string) => void;
   addComment: (postId: string, body: string) => void;
   deleteComment: (id: string) => void;
-  sendChat: (msg: { body?: string; media?: MediaItem; forwardedFrom?: string }) => void;
+  sendChat: (msg: { body?: string; media?: MediaItem; forwardedFrom?: string; replyTo?: string }) => void;
   // выбрать фото/видео с телефона (в демо — цветная плитка)
   pickMedia: (kind: 'photo' | 'video', multiple?: boolean) => Promise<MediaItem[]>;
   takePhoto: () => Promise<MediaItem[]>; // снять на камеру прямо сейчас

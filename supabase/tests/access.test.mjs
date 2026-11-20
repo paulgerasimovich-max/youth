@@ -289,6 +289,21 @@ test('you can edit only the text of your own message', async () => {
   await denied(query(GUEST, `update public.chat_messages set body = 'x'`), /permission denied/, 'guest edits chat');
 });
 
+test('a reply remembers its message and survives when that message is deleted', async () => {
+  const original = await one(alice, `insert into public.chat_messages (body) values ('who is in?') returning id`);
+  const reply = await one(bob, `insert into public.chat_messages (body, reply_to) values ('me!', $1) returning id, reply_to`, [original.id]);
+  equal(reply.reply_to, original.id, 'reply points at the message');
+  await denied(query(bob, `insert into public.chat_messages (body, reply_to) values ('?', gen_random_uuid())`), /foreign key/, 'reply to a message that does not exist');
+  await denied(query(bob, `update public.chat_messages set reply_to = null where id = $1`, [reply.id]), /permission denied/, 'change what a reply points at');
+  await denied(query(mallory, `insert into public.chat_messages (user_id, body, reply_to) values ($1, 'fake', $2)`, [alice.uid, original.id]), /row-level security/, 'reply as someone else');
+
+  await query(alice, `delete from public.chat_messages where id = $1`, [original.id]);
+  const after = await one(bob, `select body, reply_to from public.chat_messages where id = $1`, [reply.id]);
+  equal(after.body, 'me!', 'the reply stays');
+  equal(after.reply_to, null, 'and just loses its quote');
+  await query(bob, `delete from public.chat_messages where id = $1`, [reply.id]);
+});
+
 test('blocking hides that person only for you', async () => {
   await query(alice, `insert into public.blocks (blocked_id) values ($1)`, [mallory.uid]);
   equal((await query(alice, `select body from public.chat_messages`)).map((r) => r.body), ['hello'], 'Alice view');

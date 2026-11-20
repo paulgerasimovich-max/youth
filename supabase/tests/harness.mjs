@@ -34,6 +34,7 @@ export async function createDb() {
   const core = fs.readFileSync(path.join(here, '../migrations/20261119000001_core.sql'), 'utf8');
   await db.exec(core);
   await db.exec(fs.readFileSync(path.join(here, '../migrations/20261119000004_chat_edit.sql'), 'utf8'));
+  await db.exec(fs.readFileSync(path.join(here, '../migrations/20261119000005_chat_reply.sql'), 'utf8'));
 
   // who: 'admin-console' (владелец базы), 'guest' (без входа) или { uid } (вошедший человек).
   // { uid, role: 'anon' } — гость, который зачем-то прислал чужой вход.
