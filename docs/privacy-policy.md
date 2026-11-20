@@ -52,7 +52,7 @@ Only the services that run the app:
 
 - **Supabase** — stores the database and files (United States).
 - **Expo, Apple and Google** — deliver push notifications to your phone.
-- **[EMAIL SERVICE NAME]** — sends the sign-in code to your email.
+- **Resend** — sends the sign-in code to your email.
 
 We do not share your information with anyone else unless the law requires it.
 
