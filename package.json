@@ -48,7 +48,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test:db": "node supabase/tests/access.test.mjs"
+    "test:db": "node supabase/tests/access.test.mjs",
+    "site:build": "node scripts/build-site.mjs"
   },
   "private": true
 }

@@ -1,11 +1,14 @@
 // Уведомления, конфиденциальность, заблокированные.
 
 import React, { useEffect, useState } from 'react';
-import { AppState, View } from 'react-native';
+import { AppState, Linking, View } from 'react-native';
 import { colors, space } from '../../theme';
 import { Avatar, Button, Card, Empty, Header, Ionicons, Screen, ToggleRow, Txt } from '../../components/ui';
 import { useStore } from '../../data/store';
 import { openPhoneSettings, pushPermission } from '../../lib/push';
+
+// Полный текст политики лежит на сайте приложения (папка site/, собирается из docs/privacy-policy.md)
+const PRIVACY_URL = 'https://woodmarkyouth.com/privacy/';
 
 export function NotificationsScreen() {
   const { notif, setNotif } = useStore();
@@ -62,7 +65,7 @@ export function PrivacyScreen() {
             <Txt v="body" style={{ marginTop: 4 }}>{b.text}</Txt>
           </Card>
         ))}
-        <Button title="Read the full Privacy Policy" icon="open-outline" variant="outline" onPress={() => showToast('The policy page will open here.')} />
+        <Button title="Read the full Privacy Policy" icon="open-outline" variant="outline" onPress={() => { Linking.openURL(PRIVACY_URL).catch(() => showToast("Couldn't open the page.")); }} />
       </View>
     </Screen>
   );
