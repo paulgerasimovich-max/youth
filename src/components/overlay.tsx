@@ -2,10 +2,11 @@
 // и короткие подсказки. Рисуются поверх всего приложения.
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, radius, space } from '../theme';
 import { useStore } from '../data/store';
+import { EMOJI_GROUPS } from '../data/emojis';
 import { IconName, Ionicons, Txt } from './ui';
 
 export interface SheetOption {
@@ -133,8 +134,11 @@ function AnchoredMenu({ menu, top, bottom, onClose }: { menu: PlacedMenu; top: n
     Animated.spring(appear, { toValue: 1, useNativeDriver: Platform.OS !== 'web', speed: 26, bounciness: 9 }).start();
   }, [appear]);
 
+  // «+» в ряду эмодзи раскрывает полный набор (как в Telegram)
+  const [allEmojis, setAllEmojis] = useState(false);
+
   const { anchor, bounds, emojis, options } = menu;
-  const pillW = emojis ? emojis.items.length * EMOJI + 12 : 0;
+  const pillW = emojis ? (emojis.items.length + 1) * EMOJI + 12 : 0;
   const pillH = emojis ? PILL_H : 0;
   const pillGap = emojis ? GAP : 0;
   const menuH = options.length * OPTION_H + 8;
@@ -159,6 +163,44 @@ function AnchoredMenu({ menu, top, bottom, onClose }: { menu: PlacedMenu; top: n
 
   const side = (w: number) => clamp(menu.alignRight ? anchor.x + anchor.width - w : anchor.x, EDGE, bounds.width - EDGE - w);
 
+  if (emojis && allEmojis) {
+    const panelW = Math.min(bounds.width - EDGE * 2, 380);
+    const panelH = Math.min(340, maxBottom - minTop);
+    const cell = Math.floor((panelW - 16) / 8);
+    // Над сообщением, если помещается; иначе под ним; иначе просто в пределах экрана
+    let panelTop = anchor.y - GAP - panelH;
+    if (panelTop < minTop) panelTop = anchorBottom + GAP;
+    panelTop = clamp(panelTop, minTop, maxBottom - panelH);
+    return (
+      <View style={StyleSheet.absoluteFill}>
+        <Pressable style={styles.menuBackdrop} onPress={onClose} accessibilityLabel="Close" />
+        <View style={[styles.panel, { top: panelTop, left: (bounds.width - panelW) / 2, width: panelW, height: panelH }]}>
+          <ScrollView contentContainerStyle={{ padding: 8 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            {EMOJI_GROUPS.map((group) => (
+              <View key={group.title}>
+                <Text style={styles.panelTitle}>{group.title}</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                  {group.items.map((emoji) => (
+                    <Pressable
+                      key={emoji}
+                      onPress={() => { onClose(); emojis.onPick(emoji); }}
+                      style={[
+                        { width: cell, height: cell, borderRadius: cell / 2, alignItems: 'center', justifyContent: 'center' },
+                        emojis.active.includes(emoji) ? { backgroundColor: colors.accentSoft } : null,
+                      ]}
+                    >
+                      <Text style={{ fontSize: 26 }}>{emoji}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={StyleSheet.absoluteFill}>
       <Pressable style={styles.menuBackdrop} onPress={onClose} accessibilityLabel="Close" />
@@ -179,6 +221,9 @@ function AnchoredMenu({ menu, top, bottom, onClose }: { menu: PlacedMenu; top: n
               <Text style={{ fontSize: 24 }}>{emoji}</Text>
             </Pressable>
           ))}
+          <Pressable onPress={() => setAllEmojis(true)} style={[styles.pillEmoji, styles.pillMore]} accessibilityLabel="More emojis">
+            <Ionicons name="add" size={22} color={colors.inkSoft} />
+          </Pressable>
         </Animated.View>
       ) : null}
       <Animated.View
@@ -210,6 +255,11 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 24px rgba(32, 21, 46, 0.18)',
   },
   pillEmoji: { width: EMOJI, height: EMOJI, borderRadius: EMOJI / 2, alignItems: 'center', justifyContent: 'center' },
+  pillMore: { width: EMOJI - 8, height: EMOJI - 8, marginLeft: 4, marginRight: 4, backgroundColor: colors.bg },
+  panel: {
+    position: 'absolute', borderRadius: 22, backgroundColor: colors.surface, overflow: 'hidden', boxShadow: '0 8px 24px rgba(32, 21, 46, 0.18)',
+  },
+  panelTitle: { fontFamily: fonts.bodyBold, fontSize: 12, color: colors.muted, marginTop: 8, marginBottom: 4, marginLeft: 6 },
   menu: {
     position: 'absolute', width: MENU_W, borderRadius: 18, backgroundColor: colors.surface, paddingVertical: 4, overflow: 'hidden',
     boxShadow: '0 8px 24px rgba(32, 21, 46, 0.18)',
