@@ -13,7 +13,7 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
       <View style={[styles.wrap, { paddingTop: insets.top + 28, paddingBottom: insets.bottom + 24 }]}>
         <View style={styles.logoRow}>
           <Image source={require('../../../assets/logo.png')} style={styles.logo} />
-          <Text style={styles.logoText}>YOUTH GROUP</Text>
+          <Text style={styles.logoText}>WOODMARK YOUTH</Text>
         </View>
 
         <View style={{ flex: 1, justifyContent: 'center' }}>

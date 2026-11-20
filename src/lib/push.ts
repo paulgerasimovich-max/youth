@@ -39,7 +39,7 @@ export async function getPushToken(ask: boolean): Promise<string | null> {
   try {
     if (Platform.OS === 'android') {
       // eslint-disable-next-line import/namespace -- значение есть в модуле, проверка просто не видит вложенный экспорт
-      await Notifications.setNotificationChannelAsync('default', { name: 'Youth Group', importance: Notifications.AndroidImportance.HIGH });
+      await Notifications.setNotificationChannelAsync('default', { name: 'Woodmark Youth', importance: Notifications.AndroidImportance.HIGH });
     }
     let status = (await Notifications.getPermissionsAsync()).status;
     if (status !== 'granted' && ask) status = (await Notifications.requestPermissionsAsync()).status;

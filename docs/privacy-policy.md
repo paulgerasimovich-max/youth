@@ -5,11 +5,11 @@
 Юрист текст не проверял.
 -->
 
-# Youth Group — Privacy Policy
+# Woodmark Youth — Privacy Policy
 
 _Last updated: November 19, 2026_
 
-Youth Group is an app for the youth group of Woodmark Church in Kirkland, Washington ("we", "us"). This page explains, in plain words, what we keep about you and what we don't.
+Woodmark Youth is the app for the youth group of Woodmark Church in Kirkland, Washington ("we", "us"). This page explains, in plain words, what we keep about you and what we don't.
 
 ## The short version
 

@@ -88,7 +88,7 @@ export function ProfileScreen() {
         <Row icon="trash-outline" title="Delete account" danger last onPress={confirmDelete} right={<View />} />
       </Card>
 
-      <Txt v="small" center style={{ marginTop: space.xl }}>{s.isDemo ? 'Youth Group · demo mode' : 'Youth Group'}</Txt>
+      <Txt v="small" center style={{ marginTop: space.xl }}>{s.isDemo ? 'Woodmark Youth · demo mode' : 'Woodmark Youth'}</Txt>
     </Screen>
   );
 }

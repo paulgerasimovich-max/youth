@@ -53,8 +53,8 @@ const page = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Privacy Policy · Youth Group</title>
-<meta name="description" content="What the Youth Group app keeps about you, and what it doesn't.">
+<title>Privacy Policy · Woodmark Youth</title>
+<meta name="description" content="What the Woodmark Youth app keeps about you, and what it doesn't.">
 <link rel="icon" href="/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -63,13 +63,13 @@ const page = `<!doctype html>
 </head>
 <body>
 <header class="top"><div class="wrap">
-  <a class="brand" href="/"><img class="logo" src="/icon.png" alt="">Youth Group</a>
+  <a class="brand" href="/"><img class="logo" src="/icon.png" alt="">Woodmark Youth</a>
   <nav><a href="/">Home</a><a href="/#help">Help</a></nav>
 </div></header>
 <main class="wrap"><article class="doc">
 ${out.join('\n')}
 </article></main>
-<footer><div class="wrap"><span>Youth Group · Woodmark Church, Kirkland, WA</span><span><a href="/">Home</a> · <a href="/rules/">Group rules</a> · <a href="/privacy/">Privacy Policy</a></span></div></footer>
+<footer><div class="wrap"><span>Woodmark Youth · Woodmark Church, Kirkland, WA</span><span><a href="/">Home</a> · <a href="/rules/">Group rules</a> · <a href="/privacy/">Privacy Policy</a></span></div></footer>
 </body>
 </html>
 `;
@@ -86,8 +86,8 @@ const rulesHtml = [
   `<p><em>${esc(rules.age)}</em></p>`,
 ].join('\n');
 const rulesPage = page
-  .replace('<title>Privacy Policy · Youth Group</title>', '<title>Group rules · Youth Group</title>')
-  .replace("What the Youth Group app keeps about you, and what it doesn't.", 'The rules everyone agrees to when they join the Youth Group app.')
+  .replace('<title>Privacy Policy · Woodmark Youth</title>', '<title>Group rules · Woodmark Youth</title>')
+  .replace("What the Woodmark Youth app keeps about you, and what it doesn't.", 'The rules everyone agrees to when they join the Woodmark Youth app.')
   .replace(out.join('\n'), rulesHtml);
 fs.mkdirSync(path.join(root, 'site/rules'), { recursive: true });
 fs.writeFileSync(path.join(root, 'site/rules/index.html'), rulesPage);

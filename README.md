@@ -1,4 +1,4 @@
-# Youth Group
+# Woodmark Youth
 
 Мобильное приложение для молодёжной группы (iPhone и Android).
 
