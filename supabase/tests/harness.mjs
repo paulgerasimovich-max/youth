@@ -19,7 +19,8 @@ const SUPABASE_STUBS = `
   create table auth.users (
     id uuid primary key default gen_random_uuid(),
     email text unique,
-    raw_user_meta_data jsonb not null default '{}'
+    raw_user_meta_data jsonb not null default '{}',
+    email_confirmed_at timestamptz
   );
   create function auth.uid() returns uuid language sql stable as $$
     select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
@@ -48,6 +49,7 @@ export async function createDb() {
   await db.exec(fs.readFileSync(path.join(here, '../migrations/20261119000008_agreement.sql'), 'utf8'));
   await db.exec(fs.readFileSync(path.join(here, '../migrations/20261119000009_push_reports.sql'), 'utf8'));
   await db.exec(fs.readFileSync(path.join(here, '../migrations/20261119000010_remove_member.sql'), 'utf8'));
+  await db.exec(fs.readFileSync(path.join(here, '../migrations/20261120000011_confirmed_members.sql'), 'utf8'));
 
   // who: 'admin-console' (владелец базы), 'guest' (без входа) или { uid } (вошедший человек).
   // { uid, role: 'anon' } — гость, который зачем-то прислал чужой вход.
@@ -68,16 +70,25 @@ export async function createDb() {
     }
   }
 
-  async function createUser(name, meta = {}) {
+  // Как в настоящей системе входа: сначала адрес запоминается без подтверждения (код отправлен),
+  // потом — если код введён верно — проставляется время подтверждения.
+  // По умолчанию человек сразу подтверждён; { confirmed: false } — остановиться на первом шаге.
+  async function createUser(name, meta = {}, { confirmed = true } = {}) {
     const rows = await query(
       'admin-console',
       `insert into auth.users (email, raw_user_meta_data) values ($1, $2) returning id`,
       [`${name.toLowerCase()}@example.com`, JSON.stringify({ name, ...meta })],
     );
-    return { uid: rows[0].id, name };
+    const user = { uid: rows[0].id, name };
+    if (confirmed) await confirmEmail(user);
+    return user;
   }
 
-  return { db, query, createUser };
+  async function confirmEmail(user) {
+    await query('admin-console', `update auth.users set email_confirmed_at = now() where id = $1`, [user.uid]);
+  }
+
+  return { db, query, createUser, confirmEmail };
 }
 
 // ---------- крошечный набор для тестов ----------

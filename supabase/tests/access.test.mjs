@@ -4,7 +4,7 @@
 
 import { assert, createDb, denied, equal, runAll, test } from './harness.mjs';
 
-const { query, createUser } = await createDb();
+const { query, createUser, confirmEmail } = await createDb();
 const ADMIN = 'admin-console'; // владелец базы (панель Supabase), не участник приложения
 const GUEST = 'guest'; // человек без входа
 
@@ -79,6 +79,26 @@ test('no table stores email, phone or password', async () => {
 test('a new account is always a plain member, whatever the app sends', async () => {
   const p = await one(ADMIN, `select role, approved from public.profiles where id = $1`, [mallory.uid]);
   equal(p, { role: 'member', approved: true }, 'Mallory profile');
+});
+
+test('an address joins the group only after its email is confirmed', async () => {
+  // Кто-то ввёл адрес на экране входа, но код из письма не ввёл (или адрес вообще чужой).
+  const ghost = await createUser('Ghost', { agreed: true }, { confirmed: false });
+  equal((await query(ADMIN, `select 1 from public.profiles where id = $1`, [ghost.uid])).length, 0, 'no profile before confirmation');
+  assert(!(await query(alice, `select name from public.profiles`)).some((r) => r.name === 'Ghost'), 'not in the member list');
+  equal((await query(ghost, `select * from public.profiles`)).length, 0, 'an unconfirmed address reads no profiles');
+  await denied(query(ghost, `insert into public.chat_messages (body) values ('hi')`), /row-level security|violates/, 'post before confirmation');
+
+  // Код введён верно — человек появляется в группе, с именем и отметкой о согласии.
+  await confirmEmail(ghost);
+  const p = await one(ADMIN, `select name, role, agreed_at is not null as agreed from public.profiles where id = $1`, [ghost.uid]);
+  equal(p, { name: 'Ghost', role: 'member', agreed: true }, 'profile after confirmation');
+  equal((await query(ADMIN, `select 1 from public.notification_prefs where user_id = $1`, [ghost.uid])).length, 1, 'notification settings created');
+
+  // Повторные обновления аккаунта (следующие входы) ничего не дублируют и не ломают.
+  await query(ADMIN, `update auth.users set raw_user_meta_data = raw_user_meta_data where id = $1`, [ghost.uid]);
+  equal((await query(ADMIN, `select 1 from public.profiles where id = $1`, [ghost.uid])).length, 1, 'still exactly one profile');
+  await query(ADMIN, `delete from auth.users where id = $1`, [ghost.uid]);
 });
 
 test('nobody can make themselves a leader or admin', async () => {
