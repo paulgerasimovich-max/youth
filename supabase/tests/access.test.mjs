@@ -118,6 +118,48 @@ test('only the admin picks leaders, and not themselves or another admin', async 
   await denied(query(paul, `select public.set_user_role($1, 'admin')`, [bob.uid]), /member or leader/, 'admin creates another admin');
 });
 
+test('only the admin marks the pastor, and a pastor is just a leader with a badge', async () => {
+  const flags = async (u) => one(ADMIN, `select role, pastor from public.profiles where id = $1`, [u.uid]);
+
+  // Никто, кроме админа: ни участник, ни лидер, ни гость, ни сам человек напрямую.
+  await denied(query(mallory, `select public.set_pastor($1, true)`, [mallory.uid]), /Only the group admin/, 'member marks himself pastor');
+  await denied(query(lena, `select public.set_pastor($1, true)`, [lena.uid]), /Only the group admin/, 'leader marks herself pastor');
+  await denied(query(lena, `select public.set_pastor($1, true)`, [bob.uid]), /Only the group admin/, 'leader marks someone pastor');
+  await denied(query(GUEST, `select public.set_pastor($1, true)`, [bob.uid]), /permission denied/, 'guest marks someone pastor');
+  await denied(query(mallory, `update public.profiles set pastor = true where id = $1`, [mallory.uid]), /permission denied/, 'self-mark by direct update');
+  await denied(query(lena, `update public.profiles set pastor = true where id = $1`, [lena.uid]), /permission denied/, 'leader self-mark by direct update');
+
+  // Админ себя пастором не делает; другого админа не существует.
+  await denied(query(paul, `select public.set_pastor($1, true)`, [paul.uid]), /your own role/, 'admin marks himself pastor');
+  await denied(query(paul, `select public.set_pastor($1, null)`, [bob.uid]), /yes or no/, 'empty value');
+  await denied(query(paul, `select public.set_pastor(gen_random_uuid(), true)`), /Member not found/, 'unknown person');
+
+  // Обычный участник становится пастором — и заодно лидером.
+  await query(paul, `select public.set_pastor($1, true)`, [bob.uid]);
+  equal(await flags(bob), { role: 'leader', pastor: true }, 'Bob is the pastor');
+  // Все в группе видят отметку.
+  equal((await one(alice, `select pastor from public.profiles where id = $1`, [bob.uid])).pastor, true, 'members see the badge');
+
+  // Права — ровно как у лидера: назначать лидеров и убирать людей пастор не может.
+  await denied(query(bob, `select public.set_user_role($1, 'leader')`, [mallory.uid]), /Only the group admin/, 'pastor picks leaders');
+  await denied(query(bob, `select public.remove_member($1)`, [mallory.uid]), /Only the group admin/, 'pastor removes a member');
+  await denied(query(bob, `select public.set_pastor($1, true)`, [lena.uid]), /Only the group admin/, 'pastor marks another pastor');
+  equal((await one(bob, `select public.is_leader() as l, public.is_admin() as a`)), { l: true, a: false }, 'pastor is a leader, not an admin');
+
+  // Снять отметку — человек остаётся лидером.
+  await query(paul, `select public.set_pastor($1, false)`, [bob.uid]);
+  equal(await flags(bob), { role: 'leader', pastor: false }, 'badge removed, still a leader');
+
+  // Снять лидера — отметка уходит вместе с ролью.
+  await query(paul, `select public.set_pastor($1, true)`, [bob.uid]);
+  await query(paul, `select public.set_user_role($1, 'member')`, [bob.uid]);
+  equal(await flags(bob), { role: 'member', pastor: false }, 'demoted pastor loses the badge');
+
+  // Даже владелец базы не может оставить отметку на обычном участнике.
+  await denied(query(ADMIN, `update public.profiles set pastor = true where id = $1`, [bob.uid]), /profiles_pastor_is_leader/, 'pastor badge on a member');
+  equal((await flags(paul)).pastor, false, 'the admin is not the pastor');
+});
+
 test('you can rename yourself but not somebody else', async () => {
   await query(alice, `update public.profiles set name = 'Alice C' where id = $1`, [alice.uid]);
   await query(mallory, `update public.profiles set name = 'Hacked' where id = $1`, [alice.uid]);

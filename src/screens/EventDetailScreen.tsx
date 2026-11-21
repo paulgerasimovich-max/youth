@@ -85,7 +85,7 @@ export function EventDetailScreen({ route, navigation }: ScreenProps<'EventDetai
               <View key={u.id} style={styles.person}>
                 <Avatar user={u} size={38} />
                 <Txt v="bodyBold" style={{ flex: 1 }}>{u.id === s.me!.id ? 'You' : u.name}</Txt>
-                <RoleBadge role={u.role} />
+                <RoleBadge role={u.role} pastor={u.pastor} />
               </View>
             ))
           )}

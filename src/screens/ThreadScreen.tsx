@@ -89,7 +89,7 @@ export function ThreadScreen({ route, navigation }: ScreenProps<'Thread'>) {
                 {!right ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4, marginLeft: 4 }}>
                     <Txt v="smallBold">{leader ? leader.name : 'Anonymous'}</Txt>
-                    {leader ? <RoleBadge role={leader.role} /> : null}
+                    {leader ? <RoleBadge role={leader.role} pastor={leader.pastor} /> : null}
                   </View>
                 ) : null}
                 <View style={[styles.bubble, right ? styles.mine : styles.theirs]}>

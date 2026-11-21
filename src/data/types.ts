@@ -7,6 +7,7 @@ export interface User {
   name: string;
   birthday?: string; // «ММ-ДД» — по желанию, без года
   role: Role;
+  pastor?: boolean; // отметка «пастор» поверх роли лидера: только значок, прав не добавляет
   agreed?: boolean; // подтвердил возраст 13+ и принял правила группы
 }
 

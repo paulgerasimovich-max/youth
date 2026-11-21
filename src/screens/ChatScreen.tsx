@@ -370,7 +370,7 @@ function Bubble({ message, showAuthor, onEdit, onReply, onJump, flash }: {
         {showAuthor && !mine ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4, marginLeft: 4 }}>
             <Txt v="smallBold">{user?.name ?? 'Someone'}</Txt>
-            {user ? <RoleBadge role={user.role} /> : null}
+            {user ? <RoleBadge role={user.role} pastor={user.pastor} /> : null}
           </View>
         ) : null}
         <Animated.View style={{ transform: [{ scale }] }}>

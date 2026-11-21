@@ -30,7 +30,7 @@ export function ProfileScreen() {
         <Avatar user={me} size={88} />
         <Txt v="h1" style={{ marginTop: space.md }}>{me.name}</Txt>
         <View style={{ marginTop: 6 }}>
-          {me.role === 'member' ? <Txt v="small">Member</Txt> : <RoleBadge role={me.role} />}
+          {me.role === 'member' ? <Txt v="small">Member</Txt> : <RoleBadge role={me.role} pastor={me.pastor} />}
         </View>
       </View>
 

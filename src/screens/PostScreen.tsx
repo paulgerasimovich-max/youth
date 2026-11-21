@@ -59,7 +59,7 @@ export function PostScreen({ route }: ScreenProps<'Post'>) {
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <Txt v="bodyBold">{author?.name}</Txt>
-                  {author ? <RoleBadge role={author.role} /> : null}
+                  {author ? <RoleBadge role={author.role} pastor={author.pastor} /> : null}
                 </View>
                 <Txt v="body" style={{ marginTop: 2 }}>{post.note}</Txt>
               </View>
@@ -112,7 +112,7 @@ function CommentItem({ comment }: { comment: Comment }) {
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <Txt v="smallBold">{user?.name ?? 'Someone'}</Txt>
-          {user ? <RoleBadge role={user.role} /> : null}
+          {user ? <RoleBadge role={user.role} pastor={user.pastor} /> : null}
           <Txt v="small">{timeAgo(comment.createdAt)}</Txt>
         </View>
         <Txt v="body" style={{ marginTop: 2 }}>{comment.body}</Txt>

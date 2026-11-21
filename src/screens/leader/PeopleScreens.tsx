@@ -4,28 +4,35 @@ import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, Text, View } from 'react-native';
 import { colors, space } from '../../theme';
 import { Avatar, Button, Card, Chip, Field, Header, Ionicons, RoleBadge, Screen, Txt } from '../../components/ui';
-import { useOverlay } from '../../components/overlay';
+import { useOverlay, type SheetOption } from '../../components/overlay';
 import { useStore } from '../../data/store';
 import { birthdayLabel, daysUntilBirthday } from '../../lib/dates';
 import type { User } from '../../data/types';
 import type { ScreenProps } from '../../navigation/types';
 
-const roleOrder = { admin: 0, leader: 1, member: 2 } as const;
+// Порядок в списке: пастор, потом лидеры (админ среди них — он выглядит обычным лидером), потом участники.
+const rank = (u: User) => (u.role === 'member' ? 2 : u.pastor ? 0 : 1);
 
 export function MembersScreen(_props: ScreenProps<'Members'>) {
   const s = useStore();
   const { openSheet } = useOverlay();
-  const people = [...s.db.users].sort((a, b) => roleOrder[a.role] - roleOrder[b.role] || a.name.localeCompare(b.name));
+  const people = [...s.db.users].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
 
   const manage = (u: User) => {
     if (!s.isAdmin || u.role === 'admin' || u.id === s.me!.id) return;
     const first = u.name.split(' ')[0];
+    const leaderOption: SheetOption = u.role === 'member'
+      ? { label: `Make ${first} a leader`, icon: 'star-outline', onPress: () => { s.setUserRole(u.id, 'leader'); s.showToast(`${first} is now a leader.`); } }
+      : { label: `Remove ${first} as a leader`, icon: 'remove-circle-outline', danger: true, onPress: () => { s.setUserRole(u.id, 'member'); s.showToast(`${first} is a member again.`); } };
+    // Пастор — тот же лидер, только со значком «PASTOR». Участник при этом сразу становится лидером.
+    const pastorOption: SheetOption = u.pastor
+      ? { label: 'Take off the pastor badge', icon: 'ribbon-outline', onPress: () => { s.setPastor(u.id, false); s.showToast(`${first} is a leader now.`); } }
+      : { label: `Make ${first} a pastor`, icon: 'ribbon-outline', onPress: () => { s.setPastor(u.id, true); s.showToast(`${first} is now a pastor.`); } };
     openSheet({
       title: u.name,
+      // сначала спокойные действия, красные («снять», «убрать») — внизу
       options: [
-        u.role === 'member'
-          ? { label: `Make ${first} a leader`, icon: 'star-outline', onPress: () => { s.setUserRole(u.id, 'leader'); s.showToast(`${first} is now a leader.`); } }
-          : { label: `Remove ${first} as a leader`, icon: 'remove-circle-outline', danger: true, onPress: () => { s.setUserRole(u.id, 'member'); s.showToast(`${first} is a member again.`); } },
+        ...(u.role === 'member' ? [leaderOption, pastorOption] : [pastorOption, leaderOption]),
         { label: `Remove ${first} from the group`, icon: 'person-remove-outline', danger: true, onPress: () => confirmRemove(u) },
       ],
     });
@@ -44,7 +51,7 @@ export function MembersScreen(_props: ScreenProps<'Members'>) {
       <Header title="Members" />
       <View style={{ paddingHorizontal: space.xl, paddingTop: space.sm }}>
         <Txt v="small" style={{ marginBottom: space.md }}>
-          {people.length === 1 ? '1 person' : `${people.length} people`} in the group. {s.isAdmin ? 'Tap someone to make them a leader or remove them.' : 'Only the group admin can pick leaders.'}
+          {people.length === 1 ? '1 person' : `${people.length} people`} in the group. {s.isAdmin ? 'Tap someone to make them a leader or a pastor, or to remove them.' : 'Only the group admin can pick leaders.'}
         </Txt>
         <Card style={{ paddingVertical: 4 }}>
           {people.map((u, i) => {
@@ -63,7 +70,7 @@ export function MembersScreen(_props: ScreenProps<'Members'>) {
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <Txt v="bodyBold">{u.name}{u.id === s.me!.id ? ' (you)' : ''}</Txt>
-                    <RoleBadge role={u.role} />
+                    <RoleBadge role={u.role} pastor={u.pastor} />
                   </View>
                 </View>
                 {canManage ? <Ionicons name="ellipsis-horizontal" size={18} color={colors.muted} /> : null}

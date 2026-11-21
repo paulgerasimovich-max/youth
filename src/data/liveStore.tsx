@@ -83,7 +83,7 @@ async function fetchEverything(userId: string, secrets: DeviceSecret[]) {
     profiles, myBirthday, birthdaysToday, birthdaysAll, sermons, posts, postReactions, comments, events, rsvps, ideas, votes,
     albums, mediaItems, chatDesc, chatReactions, greetings, blocks, prefs, reports, leaderThreads, leaderMessages,
   ] = await Promise.all([
-    rows(from('profiles').select('id, name, role, agreed_at')),
+    rows(from('profiles').select('id, name, role, pastor, agreed_at')),
     rows(from('birthdays').select('user_id, month, day')),
     rows(supabase.rpc('birthdays_today')),
     rows(supabase.rpc('birthdays_for_leaders')),
@@ -159,7 +159,7 @@ async function fetchEverything(userId: string, secrets: DeviceSecret[]) {
   }
 
   const db: Db = {
-    users: profiles.map((p) => ({ id: p.id, name: p.name, role: p.role as Role, birthday: birthdayOf[p.id], agreed: !!p.agreed_at })),
+    users: profiles.map((p) => ({ id: p.id, name: p.name, role: p.role as Role, pastor: !!p.pastor, birthday: birthdayOf[p.id], agreed: !!p.agreed_at })),
     sermons: sermons.map((s) => ({ id: s.id, title: s.title, preacher: s.preacher, date: s.date, paragraphs: s.paragraphs })),
     posts: posts.map((p) => ({
       id: p.id, sermonId: p.sermon_id ?? '', day: p.day, time: hhmmOf(p.publish_at), quote: p.quote, note: p.note ?? undefined,
@@ -664,8 +664,12 @@ export function LiveStoreProvider({ children, onReviewAccess }: { children: Reac
         act(() => supabase.from('daily_posts').delete().eq('id', id));
       },
       setUserRole: (targetId, role) => {
-        patch((d) => ({ users: d.users.map((u) => (u.id === targetId ? { ...u, role } : u)) }));
+        patch((d) => ({ users: d.users.map((u) => (u.id === targetId ? { ...u, role, pastor: role === 'leader' && !!u.pastor } : u)) }));
         act(() => supabase.rpc('set_user_role', { p_user: targetId, p_role: role }));
+      },
+      setPastor: (targetId, on) => {
+        patch((d) => ({ users: d.users.map((u) => (u.id === targetId ? { ...u, pastor: on, role: on ? 'leader' : u.role } : u)) }));
+        act(() => supabase.rpc('set_pastor', { p_user: targetId, p_on: on }));
       },
       removeMember: (targetId) => {
         // аккаунт и всё, что человек написал, удаляются на сервере; снова войти с той же почтой он не сможет

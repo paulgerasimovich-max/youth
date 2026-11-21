@@ -51,6 +51,7 @@ export async function createDb() {
   await db.exec(fs.readFileSync(path.join(here, '../migrations/20261119000010_remove_member.sql'), 'utf8'));
   await db.exec(fs.readFileSync(path.join(here, '../migrations/20261120000011_confirmed_members.sql'), 'utf8'));
   await db.exec(fs.readFileSync(path.join(here, '../migrations/20261121000012_admin_wording.sql'), 'utf8'));
+  await db.exec(fs.readFileSync(path.join(here, '../migrations/20261121000013_pastor.sql'), 'utf8'));
 
   // who: 'admin-console' (владелец базы), 'guest' (без входа) или { uid } (вошедший человек).
   // { uid, role: 'anon' } — гость, который зачем-то прислал чужой вход.

@@ -74,7 +74,7 @@ export function buildDemoDb(): { db: Db; deviceSecrets: DeviceSecret[] } {
   const users: User[] = [
     { id: ME_ID, name: 'Alex Carter', birthday: bday(0), role: 'member' },
     { id: DAVID, name: 'David Brooks', birthday: bday(120), role: 'admin' },
-    { id: SARAH, name: 'Sarah Mitchell', birthday: bday(45), role: 'leader' },
+    { id: SARAH, name: 'Sarah Mitchell', birthday: bday(45), role: 'leader', pastor: true },
     { id: JORDAN, name: 'Jordan Reyes', birthday: bday(16), role: 'leader' },
     { id: 'u_mia', name: 'Mia Thompson', birthday: bday(0), role: 'member' },
     { id: 'u_noah', name: 'Noah Williams', birthday: bday(3), role: 'member' },

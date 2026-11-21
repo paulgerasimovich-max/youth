@@ -197,7 +197,8 @@ export function DemoStoreProvider({ children, signedIn, onExit }: { children: Re
           ),
         })),
       deletePost: (id) => patch((d) => ({ posts: d.posts.filter((p) => p.id !== id) })),
-      setUserRole: (userId, role) => patch((d) => ({ users: d.users.map((u) => (u.id === userId ? { ...u, role } : u)) })),
+      setUserRole: (userId, role) => patch((d) => ({ users: d.users.map((u) => (u.id === userId ? { ...u, role, pastor: role === 'leader' && !!u.pastor } : u)) })),
+      setPastor: (userId, on) => patch((d) => ({ users: d.users.map((u) => (u.id === userId ? { ...u, pastor: on, role: on ? 'leader' : u.role } : u)) })),
       removeMember: (userId) => {
         patch((d) => ({ users: d.users.filter((u) => u.id !== userId), chat: d.chat.filter((m) => m.userId !== userId) }));
         showToast('Removed from the group.');

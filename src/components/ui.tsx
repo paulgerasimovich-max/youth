@@ -214,12 +214,15 @@ export function AvatarStack({ users, max = 5, size = 28, ring = colors.surface }
 }
 
 // Админ (тот, кто назначает лидеров и убирает людей из группы) для всех выглядит обычным лидером:
-// «админ» — это права, а не звание. Пастор группы — другой человек.
-export function RoleBadge({ role }: { role: Role }) {
+// «админ» — это права, а не звание. Пастор — лидер с особым значком; значок прав не добавляет.
+export function RoleBadge({ role, pastor }: { role: Role; pastor?: boolean }) {
   if (role === 'member') return null;
+  const isPastor = !!pastor && role === 'leader';
   return (
-    <View style={[styles.badge, { backgroundColor: colors.plumSoft }]}>
-      <Text style={{ fontFamily: fonts.bodyHeavy, fontSize: 10, letterSpacing: 0.6, color: colors.plum }}>LEADER</Text>
+    <View style={[styles.badge, { backgroundColor: isPastor ? colors.sunSoft : colors.plumSoft }]}>
+      <Text style={{ fontFamily: fonts.bodyHeavy, fontSize: 10, letterSpacing: 0.6, color: isPastor ? '#8A6300' : colors.plum }}>
+        {isPastor ? 'PASTOR' : 'LEADER'}
+      </Text>
     </View>
   );
 }
