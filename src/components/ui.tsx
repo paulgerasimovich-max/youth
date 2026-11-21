@@ -213,14 +213,13 @@ export function AvatarStack({ users, max = 5, size = 28, ring = colors.surface }
   );
 }
 
+// Админ (тот, кто назначает лидеров и убирает людей из группы) для всех выглядит обычным лидером:
+// «админ» — это права, а не звание. Пастор группы — другой человек.
 export function RoleBadge({ role }: { role: Role }) {
   if (role === 'member') return null;
-  const admin = role === 'admin';
   return (
-    <View style={[styles.badge, { backgroundColor: admin ? colors.sunSoft : colors.plumSoft }]}>
-      <Text style={{ fontFamily: fonts.bodyHeavy, fontSize: 10, letterSpacing: 0.6, color: admin ? '#8A6300' : colors.plum }}>
-        {admin ? 'LEAD PASTOR' : 'LEADER'}
-      </Text>
+    <View style={[styles.badge, { backgroundColor: colors.plumSoft }]}>
+      <Text style={{ fontFamily: fonts.bodyHeavy, fontSize: 10, letterSpacing: 0.6, color: colors.plum }}>LEADER</Text>
     </View>
   );
 }

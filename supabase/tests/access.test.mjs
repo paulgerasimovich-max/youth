@@ -104,8 +104,8 @@ test('an address joins the group only after its email is confirmed', async () =>
 test('nobody can make themselves a leader or admin', async () => {
   await denied(query(mallory, `update public.profiles set role = 'admin' where id = $1`, [mallory.uid]), /permission denied/, 'self-promote');
   await denied(query(mallory, `update public.profiles set approved = true where id = $1`, [mallory.uid]), /permission denied/, 'self-approve');
-  await denied(query(mallory, `select public.set_user_role($1, 'leader')`, [mallory.uid]), /Only the lead pastor/, 'member picks leaders');
-  await denied(query(lena, `select public.set_user_role($1, 'leader')`, [bob.uid]), /Only the lead pastor/, 'leader picks leaders');
+  await denied(query(mallory, `select public.set_user_role($1, 'leader')`, [mallory.uid]), /Only the group admin/, 'member picks leaders');
+  await denied(query(lena, `select public.set_user_role($1, 'leader')`, [bob.uid]), /Only the group admin/, 'leader picks leaders');
   await denied(query(mallory, `insert into public.profiles (id, name, role) values ($1, 'x', 'admin')`, [mallory.uid]), /permission denied/, 'insert profile');
 });
 
@@ -563,13 +563,13 @@ test('nobody in the app can send a push or see where pushes go', async () => {
   equal((await query(lena, `select token from public.push_tokens`)).map((r) => r.token), [TOKEN.lena], 'a leader sees only their own phone');
 });
 
-test('the lead pastor can remove someone from the group, and they cannot come back', async () => {
+test('the group admin can remove someone from the group, and they cannot come back', async () => {
   const rudy = await createUser('Rudy');
   await query(lena, `select public.approve_member($1)`, [rudy.uid]); // к этому месту в тестах включено одобрение новичков
   await query(rudy, `insert into public.chat_messages (body) values ('rude stuff')`);
-  await denied(query(lena, `select public.remove_member($1)`, [rudy.uid]), /Only the lead pastor/, 'leader removes a member');
-  await denied(query(rudy, `select public.remove_member($1)`, [bob.uid]), /Only the lead pastor/, 'member removes a member');
-  await denied(query(paul, `select public.remove_member($1)`, [paul.uid]), /delete account/, 'lead pastor removes himself this way');
+  await denied(query(lena, `select public.remove_member($1)`, [rudy.uid]), /Only the group admin/, 'leader removes a member');
+  await denied(query(rudy, `select public.remove_member($1)`, [bob.uid]), /Only the group admin/, 'member removes a member');
+  await denied(query(paul, `select public.remove_member($1)`, [paul.uid]), /delete account/, 'admin removes himself this way');
 
   await query(paul, `select public.remove_member($1)`, [rudy.uid]);
   equal((await query(ADMIN, `select 1 from auth.users where id = $1`, [rudy.uid])).length, 0, 'account gone');
@@ -591,7 +591,7 @@ test('the lead pastor can remove someone from the group, and they cannot come ba
 
 test('deleting your account removes your data and nobody else\'s', async () => {
   await denied(query(GUEST, `select public.delete_my_account()`), /permission denied/, 'guest deletes');
-  await denied(query(lena, `select public.remove_member($1)`, [bob.uid]), /Only the lead pastor/, 'leader removes a member');
+  await denied(query(lena, `select public.remove_member($1)`, [bob.uid]), /Only the group admin/, 'leader removes a member');
   const before = (await query(ADMIN, `select 1 from public.profiles`)).length;
   await query(alice, `select public.delete_my_account()`);
   equal((await query(ADMIN, `select 1 from auth.users where id = $1`, [alice.uid])).length, 0, 'account gone');

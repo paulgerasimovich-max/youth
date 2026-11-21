@@ -46,7 +46,7 @@ export function ProfileScreen() {
             options={[
               { value: 'member', label: 'Member' },
               { value: 'leader', label: 'Leader' },
-              { value: 'admin', label: 'Pastor' },
+              { value: 'admin', label: 'Admin' },
             ]}
           />
         </View>
